@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+data/TKT_train.csv
+data/prediction_ranking_request.r
+data/prediction_ranking_request.py
+data/LOT UW Heckhaton - business description.pdf
+data/LOT UW Hackhaton data description.pdf
+data/TKT_test.csv
+data/FCP_test.csv
+data/FCP_test_results_example.csv
+data/EMD_train.csv
+data/EMD_test.csv
+data/BKG_train.csv
+data/BKG_test.csv
+data/FCP_train.csv
