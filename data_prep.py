@@ -84,6 +84,9 @@ def clean_df(data, data_path, data_type='train', model_type='predict_upgrade'):
         "CCVI4",
         "PAY24",
     ]
+    df = df[df['TOTAL_PRICE_PLN'] > 0]
+    df = df[df['BOOKING_WINDOW_D'] != -1]
+    df = df[df['FLIGHT_DISTANCE'] >= 0]
     df["FLIGHT_DATE_LOCAL"] = pd.to_datetime(df["FLIGHT_DATE_LOCAL"])
     df["SALES_DATE"] = pd.to_datetime(df["SALES_DATE"])
     df["sale_to_flight_time"] = df["FLIGHT_DATE_LOCAL"] - df["SALES_DATE"]
