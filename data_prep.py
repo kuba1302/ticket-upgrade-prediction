@@ -1,14 +1,6 @@
-import pandas as pd 
-import numpy as np
-import datetime
-from pathlib import Path
-import os
-
-
 import matplotlib.pyplot as plt
-import seaborn as sns 
-
-
+import numpy as np
+import pandas as pd
 
 
 def read_all_csv(data_path, data_type='train', model_type='predict_upgrade'):
