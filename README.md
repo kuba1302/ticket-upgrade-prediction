@@ -1,2 +1,2 @@
 # wec_2022
-# dane wrzucamy w folder data
+# data is stored in 'data' / 'WEC2022_Data'
