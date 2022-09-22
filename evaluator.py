@@ -48,7 +48,7 @@ class Evaluator:
         self.proba = self._get_proba()
 
     def _assert_model_has_proper_methods(self) -> None:
-        # TODO! Add support for torchs
+        # TODO! Add support for torch
         required_methods = ["predict", "predict_proba"]
         methods = dir(self.model)
 
