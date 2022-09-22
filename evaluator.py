@@ -15,7 +15,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
-
+import mlflow
 
 @dataclass
 class Metrics:
@@ -86,8 +86,8 @@ class Evaluator:
         precision, recall, _ = self._get_pr_curve_properties()
         return auc(recall, precision)
 
-    def get_all_metrics(self) -> Metrics:
-        return Metrics(
+    def get_all_metrics(self, to_mlflow: bool = False) -> Metrics:
+        metrics =  Metrics(
             accuracy=self.get_accuracy(),
             roc_auc=self.get_roc_auc(),
             precision=self.get_precision(),
@@ -95,6 +95,11 @@ class Evaluator:
             f1=self.get_f1_score(),
             pr_auc=self.get_pr_auc(),
         )
+
+        if to_mlflow: 
+            mlflow.log_metrics(metrics)
+
+        return metrics 
 
 
 if __name__ == "__main__":
