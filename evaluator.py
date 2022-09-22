@@ -1,10 +1,16 @@
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import pandas as pd
+from matplotlib.figure import Figure
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import (
     accuracy_score,
     auc,
@@ -15,12 +21,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from pathlib import Path
 from sklearn.model_selection import train_test_split
-import mlflow
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from sklearn.inspection import PartialDependenceDisplay
 
 
 @dataclass
@@ -196,6 +197,8 @@ class Evaluator:
     def plot_all_plots(
         self, save_path: Path = None, to_mlflow: bool = False
     ) -> None:
+        os.makedirs(save_path, exist_ok=True)
+
         self.plot_partial_dependency_plot(save_path=save_path)
         self.plot_precision_recall_curve(save_path=save_path)
         self.plot_roc_curve(save_path=save_path)
