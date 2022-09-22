@@ -33,11 +33,11 @@ class Pipeline:
             if self.data_type == "train"
             else self.read_csv_file("BKG")
         )
-        logger.info(f"{datetime.now()} loaded booking data")
+        logger.info("loaded booking data")
         tkt = self.read_csv_file("TKT")
-        logger.info(f"{datetime.now()} loaded ticket data")
+        logger.info("loaded ticket data")
         fcp = self.read_csv_file("FCP")
-        logger.info(f"{datetime.now()} loaded flight coupon data")
+        logger.info("loaded flight coupon data")
         return (
             bkg,
             tkt,
@@ -135,6 +135,7 @@ class Pipeline:
 
     def filter_wrong_ticket_prices(self) -> None:
         self.df = self.df[self.df["TOTAL_PRICE_PLN"] > 0]
+        logger.info("filtered wrong ticket prices")
 
     @staticmethod
     def get_datetime_columns() -> list:
@@ -151,12 +152,15 @@ class Pipeline:
         self.df[self.get_datetime_columns()] = self.df[
             self.get_datetime_columns()
         ].apply(pd.to_datetime)
+        logger.info("converted datetime columns to pandas format")
 
     def filter_wrong_booking_window(self) -> None:
         self.df = self.df[self.df["BOOKING_WINDOW_D"] != -1]
+        logger.info("filtered wrong booking windows")
 
     def filter_nonpositive_flight_distance(self) -> None:
         self.df = self.df[self.df["FLIGHT_DISTANCE"] >= 0]
+        logger.info("filtered nonpositive flight distance")
 
     def get_sale_to_flight_time(self) -> None:
         self.df["sale_to_flight_time"] = (
@@ -165,6 +169,7 @@ class Pipeline:
         self.df["sale_to_flight_time"] = self.df["sale_to_flight_time"].apply(
             lambda x: x.days
         )
+        logger.info("got sale to flight time col")
 
     @staticmethod
     def get_stay_length_map() -> dict:
@@ -180,11 +185,13 @@ class Pipeline:
             self.df["BOOKING_ARRIVAL_TIME_UTC"] - self.df["BOOKING_DEPARTURE_TIME_UTC"]
         )
         self.df["flight_len"] = self.df["flight_len"].apply(lambda x: x.seconds / 3600)
+        logger.info("got flight len col")
 
     def map_departure_time_to_hours(self) -> None:
         self.df["TIME_DEPARTURE_LOCAL_TIME"] = self.df[
             "TIME_DEPARTURE_LOCAL_TIME"
         ].apply(lambda x: x.hour)
+        logger.info("mapped departure time to hours")
 
     @staticmethod
     def get_yes_no_binary_map() -> dict:
@@ -197,16 +204,19 @@ class Pipeline:
             1,
             0,
         )
+        logger.info("checked for add upgrade")
 
     def check_for_same_carrier(self) -> None:
         self.df["same_carrier"] = np.where(
             self.df["MARKETING_CARRIER"] == self.df["OPERATIONAL_CARRIER"], 1, 0
         )
+        logger.info("checked for same carrier")
 
     def check_for_sus_aircraft(self) -> None:
         self.df["is_sus_aircraft"] = np.where(
             np.isin(self.df["AIRCRAFT_TYPE"], self.get_sus_air_type()), 1, 0
         )
+        logger.info("checked for sus aircraft")
 
     def map_target_variable_for_training(self) -> None:
         self.df["UPGRADED_FLAG"] = self.df["UPGRADED_FLAG"].map(
@@ -217,16 +227,19 @@ class Pipeline:
         self.df["is_sus_payment"] = np.where(
             np.isin(self.df["FORM_OF_PAYMENT"], self.get_sus_payment()), 1, 0
         )
+        logger.info("checked for sus payment")
 
     def get_intinerary_len(self) -> None:
         self.df["intinerary_len"] = self.df["INTINERARY"].apply(
             lambda x: len(x.split("-"))
         )
+        logger.info("got itinerary len col")
 
     def check_for_sus_currency(self) -> None:
         self.df["is_sus_currency"] = np.where(
             np.isin(self.df["FORM_OF_PAYMENT"], self.get_sus_currency()), 1, 0
         )
+        logger.info("checked for sus currency")
 
     @staticmethod
     def get_map_gender() -> dict:
@@ -234,73 +247,60 @@ class Pipeline:
 
     def map_genders(self) -> None:
         self.df["PAX_GENDER"] = self.df["PAX_GENDER"].map(self.get_map_gender())
+        logger.info("mapped genders")
 
     def map_corporate_contract_flg(self) -> None:
         self.df["CORPORATE_CONTRACT_FLG"] = self.df["CORPORATE_CONTRACT_FLG"].map(
             self.get_yes_no_binary_map()
         )
+        logger.info("mapped corporate contract flag")
 
     def map_loyal_customer(self) -> None:
         self.df["LOYAL_CUSTOMER"] = self.df["LOYAL_CUSTOMER"].map(
             self.get_yes_no_binary_map()
         )
+        logger.info("mapped loyal customers")
 
     def map_booking_long_houl_flag(self) -> None:
         self.df["BOOKING_LONG_HOUL_FLAG"] = self.df["BOOKING_LONG_HOUL_FLAG"].map(
             self.get_yes_no_binary_map()
         )
+        logger.info("mapped booking long houl flag")
 
     def map_booking_domestic_flag(self) -> None:
         self.df["BOOKING_DOMESTIC_FLAG"] = self.df["BOOKING_DOMESTIC_FLAG"].map(
             self.get_yes_no_binary_map()
         )
+        logger.info("mapped booking domestic flag")
 
     def clean_df(self):
         logger.info(f"{datetime.now()} cleaning df ...")
         self.convert_datetime_columns_to_pandas_format()
-        logger.info(f"{datetime.now()} converted datetime columns to pandas format")
         self.filter_wrong_ticket_prices()
-        logger.info(f"{datetime.now()} filtered wrong ticket prices")
         self.filter_wrong_booking_window()
-        logger.info(f"{datetime.now()} filtered wrong booking windows")
         self.filter_nonpositive_flight_distance()
-        logger.info(f"{datetime.now()} filtered nonpositive flight distance")
         self.get_sale_to_flight_time()
-        logger.info(f"{datetime.now()} got sale to flight time col")
         self.get_flight_len()
-        logger.info(f"{datetime.now()} got flight len col")
         self.map_departure_time_to_hours()
-        logger.info(f"{datetime.now()} mapped departure time to hours")
         self.check_for_add_upgrade()
-        logger.info(f"{datetime.now()} checked for add upgrade")
         self.check_for_same_carrier()
-        logger.info(f"{datetime.now()} checked for same carrier")
         self.check_for_sus_aircraft()
-        logger.info(f"{datetime.now()} checked for sus aircraft")
         self.map_target_variable_for_training() if self.data_type == "train" else None
         self.check_for_sus_payment()
-        logger.info(f"{datetime.now()} checked for sus payment")
         self.get_intinerary_len()
-        logger.info(f"{datetime.now()} got itinerary len col")
         self.check_for_sus_currency()
-        logger.info(f"{datetime.now()} checked for sus currency")
         self.map_genders()
-        logger.info(f"{datetime.now()} mapped genders")
         self.map_corporate_contract_flg()
-        logger.info(f"{datetime.now()} mapped corporate contract flag")
         self.map_loyal_customer()
-        logger.info(f"{datetime.now()} mapped loyal customers")
         self.map_booking_long_houl_flag()
-        logger.info(f"{datetime.now()} mapped booking long houl flag")
         self.map_booking_domestic_flag()
-        logger.info(f"{datetime.now()} mapped booking domestic flag")
         self.df = (
             self.df.drop(columns=self.get_cols_to_drop_for_training())
             if self.data_type == "train"
             else self.df
         )
         self.df.drop(columns=self.get_columns_to_drop(), inplace=True)
-        logger.info(f"{datetime.now()} dropped unnecessary columns")
+        logger.info(f"dropped unnecessary columns. finished cleaning df")
 
     @staticmethod
     def get_oh_cols() -> list:
