@@ -193,6 +193,16 @@ class Evaluator:
 
         return fig
 
+    def plot_all_plots(
+        self, save_path: Path = None, to_mlflow: bool = False
+    ) -> None:
+        self.plot_partial_dependency_plot(save_path=save_path)
+        self.plot_precision_recall_curve(save_path=save_path)
+        self.plot_roc_curve(save_path=save_path)
+
+        if to_mlflow:
+            mlflow.log_artifacts(save_path)
+
 
 if __name__ == "__main__":
     # Just for testing purposes, to be removed later
