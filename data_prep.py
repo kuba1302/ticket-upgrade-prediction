@@ -101,13 +101,14 @@ class Pipeline:
         ) if self.model_type == "predict_upgrade" else cols.append("UPGRADED_FLAG")
         return cols
 
-    def get_new_cols_for_predict_when_model(self) -> None:
+    def prepare_new_cols_for_predict_when_model(self) -> None:
         self.df["purchase_time_diff"] = (
             self.df["UPGRADE_SALES_DATE"] - self.df["BOOKING_DEPARTURE_TIME_UTC"]
         )
         self.df["purchase_time_diff"] = self.df["purchase_time_diff"].apply(
             lambda x: x.days
         )
+        logger.info('prepared new cols for predict when model')
 
     @staticmethod
     def get_sus_air_type() -> list:
@@ -274,6 +275,7 @@ class Pipeline:
     def clean_df(self):
         logger.info(f"{datetime.now()} cleaning df ...")
         self.convert_datetime_columns_to_pandas_format()
+        self.prepare_new_cols_for_predict_when_model() if self.model_type == 'predict_when_upgrade' else None
         self.filter_wrong_ticket_prices()
         self.filter_wrong_booking_window()
         self.filter_nonpositive_flight_distance()
@@ -325,4 +327,4 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    d = Pipeline().df
+    d = Pipeline(model_type='predict_when_upgrade').df
