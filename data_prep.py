@@ -14,11 +14,9 @@ class Pipeline:
         data_type: str = "train",
         model_type: str = "predict_upgrade",
     ):
-        self.data_path, self.data_type, self.model_type = (
-            data_path,
-            data_type,
-            model_type,
-        )
+        self.data_path = data_path
+        self.data_type = data_type
+        self.model_type = model_type
         self.df = self.merge_files()
         self.concat_df_with_oh_encoding()
 
