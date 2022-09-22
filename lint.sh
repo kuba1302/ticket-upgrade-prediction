@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-black .
-isort --profile black .
+black . --check
+isort --profile black . --check-only
