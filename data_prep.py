@@ -10,7 +10,7 @@ from loguru import logger
 class Pipeline:
     def __init__(
         self,
-        data_path: str = Path(os.getcwd()) / "WEC2022_Data",
+        data_path: str = Path(__file__) / ".." / "WEC2022_Data",
         data_type: str = "train",
         model_type: str = "predict_upgrade",
     ):
