@@ -157,7 +157,7 @@ class Evaluator:
         precision, recall, thresholds = precision_recall_curve(
             self.y, self.proba
         )
-        auc_score = auc(recall, precision)
+        auc_score = self.get_pr_auc()
 
         fscore = (2 * precision * recall) / (precision + recall)
         ix = np.argmax(fscore)
@@ -195,14 +195,13 @@ class Evaluator:
         self, save_path: Path = None, kind: str = "average"
     ) -> Figure:
 
-        cols = [col for col in self.X.columns]
+        cols = self.X.columns
         pdp = PartialDependenceDisplay.from_estimator(
             self.model, self.X, cols, kind=kind
         )
 
-        number_of_cols = len(cols)
         fig, ax = plt.subplots(1, 1)
-        fig.set_size_inches(1 * number_of_cols, 1.5 * number_of_cols)
+        fig.set_size_inches(1 * len(cols), 1.5 * len(cols))
         fig.suptitle("Partial dependency plot", size=15)
         pdp.plot(ax=ax)
 
