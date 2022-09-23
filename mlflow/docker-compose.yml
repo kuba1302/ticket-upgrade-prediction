@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  mlflow: 
+    build: 
+      context: .
+      dockerfile: Dockerfile 
+    env_file: .env
+    ports: 
+      - 5000:5000
