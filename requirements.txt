@@ -2,7 +2,5 @@ pandas
 numpy 
 sklearn 
 xgboost 
-torch 
 matplotlib
 tqdm
-wheel

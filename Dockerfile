@@ -14,3 +14,5 @@ WORKDIR /app
 
 COPY --chown=wec . .
 RUN pip install -e .
+
+CMD echo "You need to provide command using compose!"
