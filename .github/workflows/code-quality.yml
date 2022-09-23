@@ -15,5 +15,11 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
 
+      - name: Build container
+        run: >-
+          docker-compose build 
+          ticket-upgrade-prediction
       - name: Run code quality checks  
-        run: bash lint.sh
+        run: >-
+          docker-compose
+          run bash lint.sh
