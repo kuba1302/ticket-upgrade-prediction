@@ -5,8 +5,6 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - main
-    paths:
-      - '/**'
 
 jobs:
   build:
