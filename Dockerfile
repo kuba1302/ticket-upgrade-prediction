@@ -13,6 +13,6 @@ RUN pip install --user -r /tmp/requirements.txt
 WORKDIR /app
 
 COPY --chown=wec . .
-RUN pip install -e .
+RUN pip install --user -e .
 
 CMD echo "You need to provide command using compose!"
