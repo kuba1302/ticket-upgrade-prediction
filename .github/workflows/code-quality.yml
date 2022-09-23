@@ -24,4 +24,5 @@ jobs:
       - name: Run code quality checks  
         run: >-
           docker-compose
-          run bash lint.sh
+          run ticket-upgrade-prediction
+          bash lint.sh
