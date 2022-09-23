@@ -17,5 +17,5 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
 
-      - name: Run code qualit checkcs
+      - name: Run code quality checks  
         run: bash lint.sh
