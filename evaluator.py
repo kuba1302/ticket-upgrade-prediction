@@ -1,7 +1,8 @@
 import os
 from dataclasses import dataclass
+from inspect import Attribute
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -38,12 +39,13 @@ class Metrics:
 
 
 class Evaluator:
-    def __init__(self, model: Any, X: pd.DataFrame, y: pd.Series) -> None:
+    def __init__(self, model: Any, X: pd.DataFrame, y: np.array) -> None:
         self.model = model
         self._assert_model_has_proper_methods()
 
         self.X = X
         self.y = y
+        self._assert_y_has_proper_type()
 
         self.preds = self._get_preds()
         self.proba = self._get_proba()
@@ -53,6 +55,15 @@ class Evaluator:
             f"{self.__class__.__name__}(X shape: {self.X.shape},"
             f"y shape{self.y.shape}"
         )
+
+    def _assert_y_has_proper_type(self) -> None:
+        if not isinstance(self.y, np.ndarray):
+            try:
+                self.y = self.y.values
+            except AttributeError as e:
+                raise AttributeError(
+                    f"{e}. It must be either np.ndarray, pd.Series or 1 dimensional pd.DataFrame"
+                )
 
     def _assert_model_has_proper_methods(self) -> None:
         # TODO! Add support for torch
@@ -218,6 +229,8 @@ if __name__ == "__main__":
     save_path = Path(__file__).parents[0] / "plots"
     X, y = make_classification(n_samples=10000, weights=[0.5])
     X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
+    y = pd.DataFrame(data=y, columns=["y"])
+
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=42
     )
