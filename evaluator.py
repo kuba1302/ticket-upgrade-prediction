@@ -48,6 +48,12 @@ class Evaluator:
         self.preds = self._get_preds()
         self.proba = self._get_proba()
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}(X shape: {self.X.shape},"
+            f"y shape{self.y.shape}"
+        )
+
     def _assert_model_has_proper_methods(self) -> None:
         # TODO! Add support for torch
         required_methods = ["predict", "predict_proba"]
@@ -217,7 +223,6 @@ if __name__ == "__main__":
     )
     model = RandomForestClassifier()
     model.fit(X_train, y_train)
-    model.predict_proba
     evaluator = Evaluator(model=model, X=X_test, y=y_test)
     evaluator.plot_precision_recall_curve(save_path=save_path)
     evaluator.plot_roc_curve(save_path=save_path)
