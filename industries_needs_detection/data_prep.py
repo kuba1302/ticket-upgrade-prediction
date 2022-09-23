@@ -98,17 +98,20 @@ class Pipeline:
         cols = ["UPGRADE_TYPE"]
         cols.append(
             "UPGRADE_SALES_DATE"
-        ) if self.model_type == "predict_upgrade" else cols.append("UPGRADED_FLAG")
+        ) if self.model_type == "predict_upgrade" else cols.append(
+            "UPGRADED_FLAG"
+        )
         return cols
 
     def prepare_new_cols_for_predict_when_model(self) -> None:
         self.df["purchase_time_diff"] = (
-            self.df["UPGRADE_SALES_DATE"] - self.df["BOOKING_DEPARTURE_TIME_UTC"]
+            self.df["UPGRADE_SALES_DATE"]
+            - self.df["BOOKING_DEPARTURE_TIME_UTC"]
         )
         self.df["purchase_time_diff"] = self.df["purchase_time_diff"].apply(
             lambda x: x.days
         )
-        logger.info('prepared new cols for predict when model')
+        logger.info("prepared new cols for predict when model")
 
     @staticmethod
     def get_sus_air_type() -> list:
@@ -181,9 +184,12 @@ class Pipeline:
 
     def get_flight_len(self) -> None:
         self.df["flight_len"] = (
-            self.df["BOOKING_ARRIVAL_TIME_UTC"] - self.df["BOOKING_DEPARTURE_TIME_UTC"]
+            self.df["BOOKING_ARRIVAL_TIME_UTC"]
+            - self.df["BOOKING_DEPARTURE_TIME_UTC"]
         )
-        self.df["flight_len"] = self.df["flight_len"].apply(lambda x: x.seconds / 3600)
+        self.df["flight_len"] = self.df["flight_len"].apply(
+            lambda x: x.seconds / 3600
+        )
         logger.info("got flight len col")
 
     def map_departure_time_to_hours(self) -> None:
@@ -199,7 +205,10 @@ class Pipeline:
     def check_for_add_upgrade(self) -> None:
         emd = self.read_csv_file("EMD")
         self.df["if_additional_upgrade"] = np.where(
-            np.isin(self.df["TICKET_NUMBER"], emd["REFERENCE_TICKET_NUMBER"].unique()),
+            np.isin(
+                self.df["TICKET_NUMBER"],
+                emd["REFERENCE_TICKET_NUMBER"].unique(),
+            ),
             1,
             0,
         )
@@ -207,7 +216,9 @@ class Pipeline:
 
     def check_for_same_carrier(self) -> None:
         self.df["same_carrier"] = np.where(
-            self.df["MARKETING_CARRIER"] == self.df["OPERATIONAL_CARRIER"], 1, 0
+            self.df["MARKETING_CARRIER"] == self.df["OPERATIONAL_CARRIER"],
+            1,
+            0,
         )
         logger.info("checked for same carrier")
 
@@ -245,13 +256,15 @@ class Pipeline:
         return {"M": 1, "F": 0}
 
     def map_genders(self) -> None:
-        self.df["PAX_GENDER"] = self.df["PAX_GENDER"].map(self.get_map_gender())
+        self.df["PAX_GENDER"] = self.df["PAX_GENDER"].map(
+            self.get_map_gender()
+        )
         logger.info("mapped genders")
 
     def map_corporate_contract_flg(self) -> None:
-        self.df["CORPORATE_CONTRACT_FLG"] = self.df["CORPORATE_CONTRACT_FLG"].map(
-            self.get_yes_no_binary_map()
-        )
+        self.df["CORPORATE_CONTRACT_FLG"] = self.df[
+            "CORPORATE_CONTRACT_FLG"
+        ].map(self.get_yes_no_binary_map())
         logger.info("mapped corporate contract flag")
 
     def map_loyal_customer(self) -> None:
@@ -261,21 +274,21 @@ class Pipeline:
         logger.info("mapped loyal customers")
 
     def map_booking_long_houl_flag(self) -> None:
-        self.df["BOOKING_LONG_HOUL_FLAG"] = self.df["BOOKING_LONG_HOUL_FLAG"].map(
-            self.get_yes_no_binary_map()
-        )
+        self.df["BOOKING_LONG_HOUL_FLAG"] = self.df[
+            "BOOKING_LONG_HOUL_FLAG"
+        ].map(self.get_yes_no_binary_map())
         logger.info("mapped booking long houl flag")
 
     def map_booking_domestic_flag(self) -> None:
-        self.df["BOOKING_DOMESTIC_FLAG"] = self.df["BOOKING_DOMESTIC_FLAG"].map(
-            self.get_yes_no_binary_map()
-        )
+        self.df["BOOKING_DOMESTIC_FLAG"] = self.df[
+            "BOOKING_DOMESTIC_FLAG"
+        ].map(self.get_yes_no_binary_map())
         logger.info("mapped booking domestic flag")
 
     def clean_df(self):
         logger.info(f"{datetime.now()} cleaning df ...")
         self.convert_datetime_columns_to_pandas_format()
-        self.prepare_new_cols_for_predict_when_model() if self.model_type == 'predict_when_upgrade' else None
+        self.prepare_new_cols_for_predict_when_model() if self.model_type == "predict_when_upgrade" else None
         self.filter_wrong_ticket_prices()
         self.filter_wrong_booking_window()
         self.filter_nonpositive_flight_distance()
@@ -316,7 +329,9 @@ class Pipeline:
     def get_oh_encoding(self) -> pd.DataFrame:
         logger.info(f"{datetime.now()} getting OH encoding")
         return pd.get_dummies(
-            self.df[self.get_oh_cols()], prefix=self.get_oh_cols(), drop_first=True
+            self.df[self.get_oh_cols()],
+            prefix=self.get_oh_cols(),
+            drop_first=True,
         )
 
     def concat_df_with_oh_encoding(self) -> None:
@@ -327,4 +342,4 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    d = Pipeline(model_type='predict_when_upgrade').df
+    d = Pipeline(model_type="predict_when_upgrade").df

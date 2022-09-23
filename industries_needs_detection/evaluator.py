@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
@@ -23,6 +22,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import train_test_split
+
+import mlflow
 
 
 @dataclass
