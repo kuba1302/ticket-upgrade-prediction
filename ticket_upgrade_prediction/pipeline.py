@@ -342,4 +342,8 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    d = Pipeline(model_type="predict_when_upgrade").df
+    data_path = Path(__file__).parents[1] / "data" / "raw_data/"
+    pipeline = Pipeline(model_type="predict_when_upgrade", data_path=data_path)
+    pipeline.df.to_csv(
+        data_path.parents[0] / "preprocessed_when_upgrade.csv", index=False
+    )
