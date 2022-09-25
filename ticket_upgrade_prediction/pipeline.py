@@ -25,7 +25,9 @@ class Pipeline:
             self.data_path / f"{file_prefix}_{self.data_type}.csv", sep=";"
         )
 
-    def read_all_files(self) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_all_files(
+        self,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         bkg = (
             self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
             if self.data_type == "train"
@@ -343,7 +345,11 @@ class Pipeline:
 
 if __name__ == "__main__":
     data_path = Path(__file__).parents[1] / "data" / "raw_data/"
-    pipeline = Pipeline(model_type="predict_when_upgrade", data_path=data_path)
+    pipeline = Pipeline(
+        model_type="predict_upgrade",
+        data_path=data_path,
+        data_type="train",
+    )
     pipeline.df.to_csv(
-        data_path.parents[0] / "preprocessed_when_upgrade.csv", index=False
+        data_path.parents[0] / "preprocessed_upgrade.csv", index=False
     )
