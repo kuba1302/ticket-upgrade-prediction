@@ -1,8 +1,7 @@
 import os
 from dataclasses import dataclass
-from inspect import Attribute
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -226,7 +225,7 @@ class Evaluator:
 
 if __name__ == "__main__":
     # Just for testing purposes, to be removed later
-    save_path = Path(__file__).parents[0] / "plots"
+    save_path = Path(__file__).parents[1] / "plots"
     X, y = make_classification(n_samples=10000, weights=[0.5])
     X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
     y = pd.DataFrame(data=y, columns=["y"])
