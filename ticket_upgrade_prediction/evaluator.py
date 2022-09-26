@@ -21,9 +21,9 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import train_test_split
-
 import mlflow
-
+from ticket_upgrade_prediction.models import BaseModel
+from abc import ABC, abstractmethod
 
 @dataclass
 class Metrics:
@@ -37,9 +37,19 @@ class Metrics:
     def to_dict(self) -> dict:
         return self.__dict__
 
+class BaseEvaluator(ABC):
+    """Interface for Evaluator"""
+    
+    @abstractmethod
+    def get_all_metrics(self, to_mlflow: bool): 
+        """Method for getting all metrics"""
 
-class Evaluator:
-    def __init__(self, model: Any, X: pd.DataFrame, y: np.array) -> None:
+    @abstractmethod
+    def plot_all_plots(self, save_path: Path, to_mlflow: bool):
+        """Methods for plotting everything"""
+
+class Evaluator(BaseEvaluator):
+    def __init__(self, model: BaseModel, X: pd.DataFrame, y: np.array) -> None:
         self.model = model
         self._assert_model_has_proper_methods()
 
@@ -93,7 +103,7 @@ class Evaluator:
         precision, recall, thresholds = precision_recall_curve(
             self.y, self.proba
         )
-        # code is repeate to be clear what is returned
+        # code is repeated to be clear what is returned
         return precision, recall, thresholds
 
     def get_precision(self) -> float:

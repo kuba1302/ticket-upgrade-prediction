@@ -1,5 +1,8 @@
 import torch.nn as nn
-
+from ticket_upgrade_prediction.models import BaseModel
+import pandas as pd
+from data_loader import UpgradeDataset
+import torch
 
 class LinearReluModule(nn.Module):
     def __init__(self, input_size: int, output_size: int) -> None:
@@ -12,19 +15,25 @@ class LinearReluModule(nn.Module):
         return self.block(x)
 
 
-class Network(nn.Module):
-    def __init__(self, layers_sizes: list[int]) -> None:
+class Network(nn.Module, BaseModel):
+    def __init__(
+        self, input_size: int, hidden_layers_sizes: list[int]
+    ) -> None:
         super().__init__()
-        self.layers_sizes = layers_sizes
-        self.layers = nn.Sequential(self._get_hidden_layers(), nn.Sigmoid())
+        self.hidden_layers_sizes = hidden_layers_sizes
+        self.layers = nn.Sequential(
+            nn.Linear(input_size, self.hidden_layers_sizes[0]),
+            self._get_hidden_layers(),
+            nn.Linear(self.hidden_layers_sizes[-1], 1),
+        )
 
     def _get_hidden_layers(self):
         modules = []
 
-        for idx in range(len(self.layers_sizes) - 1):
+        for idx in range(len(self.hidden_layers_sizes) - 1):
             module = LinearReluModule(
-                input_size=self.layers_sizes[idx],
-                output_size=self.layers_sizes[idx + 1],
+                input_size=self.hidden_layers_sizes[idx],
+                output_size=self.hidden_layers_sizes[idx + 1],
             )
             modules.append(module)
 
@@ -33,10 +42,12 @@ class Network(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
+    def predict_proba(self, X: pd.DataFrame):
+        X_tensor = torch.from_numpy(X.values)
+        network = nn.Sequential(self.layers, nn.Sigmoid())
+        return network(X_tensor.float())
 
-# class NetworkWrapper:
-#     def __init__(self, model) -> None:
-#         self.model = model
-
-#     def predict_proba(self, X):
-#         return self.model(X)
+    def predict(self, X):
+        threshold = 0.5
+        proba = self.predict_proba(X=X)
+        return torch.where(proba >= threshold, 1, 0)
