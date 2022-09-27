@@ -121,7 +121,7 @@ class Evaluator:
         )
 
         if to_mlflow:
-            mlflow.log_metrics(metrics)
+            mlflow.log_metrics(metrics.to_dict())
 
         return metrics
 
