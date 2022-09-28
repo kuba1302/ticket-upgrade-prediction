@@ -12,23 +12,18 @@ from ticket_upgrade_prediction.pipeline import Pipeline
 
 class LassoModel(BaseModel):
     def __init__(self, from_mlflow: bool = False, **kwargs):
-        self.model = (
-            self.get_fitted_model(
-                tracking_uri=kwargs.pop(
-                    "tracking_uri", "http://localhost:5000"
-                ),
-                version=kwargs.pop("version", 1),
-            )
-            if from_mlflow
-            else self.fit_model(
-                dataset=kwargs.pop("dataset", Pipeline().df),
-                class_weight_balance=kwargs.pop(
-                    "class_weight_balance", "balanced"
-                ),
-                verbose=kwargs.pop("verbose", 2),
-                max_iter=kwargs.pop("max_iter", 333),
-                target=kwargs.pop("target", "UPGRADED_FLAG"),
-            )
+        self.model = None
+        self.get_fitted_model(
+            model_name=kwargs.pop("model_name", "LASSO"),
+            version=kwargs.pop("version", 1),
+        ) if from_mlflow else self.fit_model(
+            dataset=kwargs.pop("dataset", Pipeline().df),
+            class_weight_balance=kwargs.pop(
+                "class_weight_balance", "balanced"
+            ),
+            verbose=kwargs.pop("verbose", 2),
+            max_iter=kwargs.pop("max_iter", 333),
+            target=kwargs.pop("target", "UPGRADED_FLAG"),
         )
 
     def predict(self, X) -> np.ndarray:
@@ -37,8 +32,8 @@ class LassoModel(BaseModel):
     def predict_proba(self, X) -> np.ndarray:
         return self.model.predict_proba(X)
 
-    @staticmethod
     def fit_model(
+        self,
         dataset: pd.DataFrame,
         class_weight_balance: str,
         verbose: int,
@@ -62,18 +57,16 @@ class LassoModel(BaseModel):
         del dataset
         gc.collect()
         model.fit(X_train, y_train)
-        return model
+        self.model = model
 
-    @staticmethod
     def get_fitted_model(
-        tracking_uri: str, version: int
+        self, model_name: str, version: int
     ) -> LogisticRegression:
-        mlflow.set_tracking_uri(tracking_uri)
         model_info = mlflow.pyfunc.load_model(
-            model_uri=f"models:/LASSO/{version}"
+            model_uri=f"models:/{model_name}/{version}"
         )
-        return model_info._model_impl
+        self.model = model_info._model_impl
 
 
 if __name__ == "__main__":
-    model = LassoModel(from_mlflow=True, version=1)
+    lasso_model = LassoModel(from_mlflow=True, version=1)
