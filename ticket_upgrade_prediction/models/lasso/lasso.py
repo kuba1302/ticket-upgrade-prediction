@@ -1,6 +1,7 @@
 import gc
 
 import mlflow
+import pickle
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -8,6 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from ticket_upgrade_prediction.models.base import BaseModel
 from ticket_upgrade_prediction.pipeline import Pipeline
+from ticket_upgrade_prediction.evaluator import Evaluator
 
 
 class LassoModel(BaseModel):
@@ -54,6 +56,19 @@ class LassoModel(BaseModel):
             model_uri=f"models:/{model_name}/{version}"
         )
         self.model = model_info._model_impl
+
+    def save_model_to_pickle(self, model_name):
+        pickle.dump(self.model, open(f'{model_name}.pkl', 'wb'))
+
+    def save_model_to_mlflow(self, model_name, artifact_path, X_test, y_test):
+        with mlflow.start_run():
+            evaluator = Evaluator(model=self.model, X=X_test, y=y_test)
+            evaluator.get_all_metrics(to_mlflow=True)
+            mlflow.sklearn.log_model(
+                sk_model=self.model,
+                artifact_path=artifact_path,
+                registered_model_name=model_name
+            )
 
 
 if __name__ == "__main__":

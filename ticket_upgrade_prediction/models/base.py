@@ -25,3 +25,11 @@ class BaseModel(ABC):
     @abstractmethod
     def get_fitted_model(self, **kwargs):
         """Retrieve fitted model from MLflow"""
+
+    @abstractmethod
+    def save_model_to_pickle(self, model_name):
+        """Save model to .pkl"""
+
+    @abstractmethod
+    def save_model_to_mlflow(self, model_name, artifact_path, X_test, y_test):
+        """Save model to mlflow"""
