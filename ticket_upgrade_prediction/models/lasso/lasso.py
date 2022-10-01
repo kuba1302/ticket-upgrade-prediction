@@ -1,15 +1,15 @@
 import gc
+import pickle
 
 import mlflow
-import pickle
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
+from ticket_upgrade_prediction.evaluator import Evaluator
 from ticket_upgrade_prediction.models.base import BaseModel
 from ticket_upgrade_prediction.pipeline import Pipeline
-from ticket_upgrade_prediction.evaluator import Evaluator
 
 
 class LassoModel(BaseModel):
@@ -23,12 +23,12 @@ class LassoModel(BaseModel):
         return self.model.predict_proba(X)
 
     def fit_model(
-        self,
-        dataset: pd.DataFrame = Pipeline().df,
-        class_weight_balance: str = "balanced",
-        verbose: int = 2,
-        max_iter: int = 333,
-        target: str = "UPGRADED_FLAG",
+            self,
+            dataset: pd.DataFrame = Pipeline().df,
+            class_weight_balance: str = "balanced",
+            verbose: int = 2,
+            max_iter: int = 333,
+            target: str = "UPGRADED_FLAG",
     ) -> LogisticRegression:
         model = LogisticRegression(
             penalty="l1",
@@ -50,7 +50,7 @@ class LassoModel(BaseModel):
         self.model = model
 
     def get_fitted_model(
-        self, model_name: str = "LASSO", version: int = 1
+            self, model_name: str = "LASSO", version: int = 1
     ) -> LogisticRegression:
         model_info = mlflow.pyfunc.load_model(
             model_uri=f"models:/{model_name}/{version}"
@@ -58,7 +58,7 @@ class LassoModel(BaseModel):
         self.model = model_info._model_impl
 
     def save_model_to_pickle(self, model_name):
-        pickle.dump(self.model, open(f'{model_name}.pkl', 'wb'))
+        pickle.dump(self.model, open(f"{model_name}.pkl", "wb"))
 
     def save_model_to_mlflow(self, model_name, artifact_path, X_test, y_test):
         with mlflow.start_run():
@@ -67,7 +67,7 @@ class LassoModel(BaseModel):
             mlflow.sklearn.log_model(
                 sk_model=self.model,
                 artifact_path=artifact_path,
-                registered_model_name=model_name
+                registered_model_name=model_name,
             )
 
 
