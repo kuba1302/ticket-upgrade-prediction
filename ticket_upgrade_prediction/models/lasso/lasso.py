@@ -11,20 +11,8 @@ from ticket_upgrade_prediction.pipeline import Pipeline
 
 
 class LassoModel(BaseModel):
-    def __init__(self, from_mlflow: bool = False, **kwargs):
+    def __init__(self):
         self.model = None
-        self.get_fitted_model(
-            model_name=kwargs.pop("model_name", "LASSO"),
-            version=kwargs.pop("version", 1),
-        ) if from_mlflow else self.fit_model(
-            dataset=kwargs.pop("dataset", Pipeline().df),
-            class_weight_balance=kwargs.pop(
-                "class_weight_balance", "balanced"
-            ),
-            verbose=kwargs.pop("verbose", 2),
-            max_iter=kwargs.pop("max_iter", 333),
-            target=kwargs.pop("target", "UPGRADED_FLAG"),
-        )
 
     def predict(self, X) -> np.ndarray:
         return self.model.predict(X)
@@ -34,11 +22,11 @@ class LassoModel(BaseModel):
 
     def fit_model(
         self,
-        dataset: pd.DataFrame,
-        class_weight_balance: str,
-        verbose: int,
-        max_iter: int,
-        target: str,
+        dataset: pd.DataFrame = Pipeline().df,
+        class_weight_balance: str = "balanced",
+        verbose: int = 2,
+        max_iter: int = 333,
+        target: str = "UPGRADED_FLAG",
     ) -> LogisticRegression:
         model = LogisticRegression(
             penalty="l1",
@@ -60,7 +48,7 @@ class LassoModel(BaseModel):
         self.model = model
 
     def get_fitted_model(
-        self, model_name: str, version: int
+        self, model_name: str = "LASSO", version: int = 1
     ) -> LogisticRegression:
         model_info = mlflow.pyfunc.load_model(
             model_uri=f"models:/{model_name}/{version}"
@@ -69,4 +57,5 @@ class LassoModel(BaseModel):
 
 
 if __name__ == "__main__":
-    lasso_model = LassoModel(from_mlflow=True, version=1)
+    lasso_model = LassoModel()
+    lasso_model.get_fitted_model(version=1)
