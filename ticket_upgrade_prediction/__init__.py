@@ -1,2 +1,2 @@
-from .pipeline import Pipeline
 from .evaluator import Evaluator, Metrics
+from .pipeline import Pipeline

@@ -1,9 +1,10 @@
-from torch.utils.data import Dataset
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.base import TransformerMixin
 from sklearn.preprocessing import StandardScaler
+from torch.utils.data import Dataset
 
 
 class UpgradeDataset(Dataset):

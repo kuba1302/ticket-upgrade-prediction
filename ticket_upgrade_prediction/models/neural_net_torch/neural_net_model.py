@@ -1,8 +1,10 @@
-import torch.nn as nn
-from ticket_upgrade_prediction.models import BaseModel
 import pandas as pd
-from data_loader import UpgradeDataset
 import torch
+import torch.nn as nn
+from data_loader import UpgradeDataset
+
+from ticket_upgrade_prediction.models import BaseModel
+
 
 class LinearReluModule(nn.Module):
     def __init__(self, input_size: int, output_size: int) -> None:
@@ -26,6 +28,7 @@ class Network(nn.Module, BaseModel):
             self._get_hidden_layers(),
             nn.Linear(self.hidden_layers_sizes[-1], 1),
         )
+        print(self.layers)
 
     def _get_hidden_layers(self):
         modules = []
@@ -42,7 +45,7 @@ class Network(nn.Module, BaseModel):
     def forward(self, x):
         return self.layers(x)
 
-    def predict_proba(self, X: pd.DataFrame):
+    def predict_proba(self, X: pd.DataFrame) -> torch.Tensor:
         X_tensor = torch.from_numpy(X.values)
         network = nn.Sequential(self.layers, nn.Sigmoid())
         return network(X_tensor.float())
@@ -50,4 +53,5 @@ class Network(nn.Module, BaseModel):
     def predict(self, X):
         threshold = 0.5
         proba = self.predict_proba(X=X)
-        return torch.where(proba >= threshold, 1, 0)
+        return torch.where(proba >= threshold, 1, 0).numpy()
+

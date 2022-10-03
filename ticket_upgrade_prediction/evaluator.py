@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -6,6 +7,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
 from matplotlib.figure import Figure
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
@@ -21,9 +23,10 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import train_test_split
+
 import mlflow
 from ticket_upgrade_prediction.models import BaseModel
-from abc import ABC, abstractmethod
+
 
 @dataclass
 class Metrics:
@@ -37,16 +40,18 @@ class Metrics:
     def to_dict(self) -> dict:
         return self.__dict__
 
+
 class BaseEvaluator(ABC):
     """Interface for Evaluator"""
-    
+
     @abstractmethod
-    def get_all_metrics(self, to_mlflow: bool): 
+    def get_all_metrics(self, to_mlflow: bool):
         """Method for getting all metrics"""
 
     @abstractmethod
     def plot_all_plots(self, save_path: Path, to_mlflow: bool):
         """Methods for plotting everything"""
+
 
 class Evaluator(BaseEvaluator):
     def __init__(self, model: BaseModel, X: pd.DataFrame, y: np.array) -> None:
@@ -91,7 +96,15 @@ class Evaluator(BaseEvaluator):
         return self.model.predict(self.X)
 
     def _get_proba(self) -> np.array:
-        return self.model.predict_proba(self.X)[:, 1]
+        proba = self.model.predict_proba(self.X)
+
+        if isinstance(proba, torch.Tensor):
+            return proba.numpy().reshape(-1)
+
+        if proba.shape[1] == 1:
+            return proba[:, 1]
+
+        return proba
 
     def get_accuracy(self) -> float:
         return accuracy_score(y_true=self.y, y_pred=self.preds)
