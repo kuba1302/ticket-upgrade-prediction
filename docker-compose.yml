@@ -10,7 +10,7 @@ services:
       - ./:/app
     command: /bin/sh -c "while sleep 10000; do :; done"
   
-  ticker-upgrade-prediction-gpu:
+  ticket-upgrade-prediction-gpu:
     build: 
       context: .
       dockerfile: Dockerfile.gpu
