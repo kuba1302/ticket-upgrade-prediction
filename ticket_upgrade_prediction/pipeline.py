@@ -15,7 +15,11 @@ class Pipeline:
         data_path: str = Path(__file__) / ".." / ".." / "WEC2022_Data",
         model_type: str = "predict_upgrade",
     ):
-        self.target = 'UPGRADE_SALES_DATE' if model_type == 'predict_when_upgrade' else 'UPGRADED_FLAG'
+        self.target = (
+            "UPGRADE_SALES_DATE"
+            if model_type == "predict_when_upgrade"
+            else "UPGRADED_FLAG"
+        )
         self.data_path = data_path
         self.model_type = model_type
         self.scaler = StandardScaler()
@@ -28,9 +32,7 @@ class Pipeline:
         )
 
     def read_all_files(self) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
-        bkg = (
-            self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
-        )
+        bkg = self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
         logger.info("loaded booking data")
         tkt = self.read_csv_file("TKT")
         logger.info("loaded ticket data")
@@ -91,9 +93,11 @@ class Pipeline:
             "BOOKING_DESTINATION_AIRPORT",
             "BOOKING_DESTINATION_COUNTRY_CODE",
             "BOOKING_ARRIVAL_TIME_UTC",
-            "UPGRADE_TYPE"
+            "UPGRADE_TYPE",
         ]
-        lst.append('UPGRADE_SALES_DATE') if self.model_type == 'predict_upgrade' else None
+        lst.append(
+            "UPGRADE_SALES_DATE"
+        ) if self.model_type == "predict_upgrade" else None
         return lst
 
     def prepare_new_cols_for_predict_when_model(self) -> None:
@@ -331,15 +335,42 @@ class Pipeline:
 
     def scale_final_dataset(self) -> None:
         self.concat_df_with_oh_encoding()
-        X_train, X_test, y_train, y_test = train_test_split(self.df.drop(columns=self.target), self.df[self.target], test_size=0.2, random_state=69420, stratify=self.df[self.target] if self.model_type=='predict_upgrade' else None)
-        X_train[self.get_cols_to_scale()] = self.scaler.fit_transform(X_train[self.get_cols_to_scale()])
+        X_train, X_test, y_train, y_test = train_test_split(
+            self.df.drop(columns=self.target),
+            self.df[self.target],
+            test_size=0.2,
+            random_state=69420,
+            stratify=self.df[self.target]
+            if self.model_type == "predict_upgrade"
+            else None,
+        )
+        X_train[self.get_cols_to_scale()] = self.scaler.fit_transform(
+            X_train[self.get_cols_to_scale()]
+        )
         X_test = self.scaler.transform(X_test[self.get_cols_to_scale()])
-        self.df = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test}
-        logger.info('scaled features')
+        self.df = {
+            "X_train": X_train,
+            "X_test": X_test,
+            "y_train": y_train,
+            "y_test": y_test,
+        }
+        logger.info("scaled features")
 
     def get_cols_to_scale(self) -> list:
-        lst = ['COUPON_NUMBER', 'FLIGHT_DISTANCE', 'TOTAL_PRICE_PLN', 'BOOKING_WINDOW_D', 'STAY_LENGTH_D', 'PAX_N', 'sale_to_flight_time', 'flight_len', 'intinerary_len']
-        lst.append('purchase_time_diff') if self.model_type == 'predict_when_upgrade' else None
+        lst = [
+            "COUPON_NUMBER",
+            "FLIGHT_DISTANCE",
+            "TOTAL_PRICE_PLN",
+            "BOOKING_WINDOW_D",
+            "STAY_LENGTH_D",
+            "PAX_N",
+            "sale_to_flight_time",
+            "flight_len",
+            "intinerary_len",
+        ]
+        lst.append(
+            "purchase_time_diff"
+        ) if self.model_type == "predict_when_upgrade" else None
         return lst
 
 
