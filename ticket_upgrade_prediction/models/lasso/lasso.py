@@ -23,12 +23,12 @@ class LassoModel(BaseModel):
         return self.model.predict_proba(X)
 
     def fit_model(
-            self,
-            dataset: pd.DataFrame = Pipeline().df,
-            class_weight_balance: str = "balanced",
-            verbose: int = 2,
-            max_iter: int = 333,
-            target: str = "UPGRADED_FLAG",
+        self,
+        dataset: pd.DataFrame = Pipeline().df,
+        class_weight_balance: str = "balanced",
+        verbose: int = 2,
+        max_iter: int = 333,
+        target: str = "UPGRADED_FLAG",
     ) -> LogisticRegression:
         model = LogisticRegression(
             penalty="l1",
@@ -50,7 +50,7 @@ class LassoModel(BaseModel):
         self.model = model
 
     def get_fitted_model(
-            self, model_name: str = "LASSO", version: int = 1
+        self, model_name: str = "LASSO", version: int = 1
     ) -> LogisticRegression:
         model_info = mlflow.pyfunc.load_model(
             model_uri=f"models:/{model_name}/{version}"
