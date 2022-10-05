@@ -1,10 +1,8 @@
-import gc
 import pickle
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
 
 import mlflow
 from ticket_upgrade_prediction.evaluator import Evaluator
@@ -24,7 +22,7 @@ class LassoModel(BaseModel):
 
     def fit_model(
         self,
-        dataset: pd.DataFrame = Pipeline().df,
+        dataset: dict = Pipeline().df,
         class_weight_balance: str = "balanced",
         verbose: int = 2,
         max_iter: int = 333,
@@ -37,16 +35,7 @@ class LassoModel(BaseModel):
             verbose=verbose,
             max_iter=max_iter,
         )
-        dataset.dropna(inplace=True)
-        X_train, _, y_train, _ = train_test_split(
-            dataset.drop([target], axis=1),
-            dataset[[target]],
-            test_size=0.2,
-            random_state=42,
-        )
-        del dataset
-        gc.collect()
-        model.fit(X_train, y_train)
+        model.fit(dataset["X_train"], dataset["y_train"])
         self.model = model
 
     def get_fitted_model(
