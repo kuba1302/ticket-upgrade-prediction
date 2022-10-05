@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 class Pipeline:
     def __init__(
         self,
-        data_path: str = Path(__file__) / ".." / ".." / "WEC2022_Data",
+        data_path: str = Path(__file__).parents[1] / "WEC2022_Data",
         model_type: str = "predict_upgrade",
     ):
         self.target = (
@@ -62,7 +62,7 @@ class Pipeline:
         return fcp[fcp["UPGRADED_FLAG"] == "Y"]
 
     def get_columns_to_drop(self) -> list:
-        lst = [
+        cols_to_drop = [
             "TICKET_NUMBER",
             "ORIGIN_AIRPORT_CODE",
             "DESTINATION_AIRPORT_CODE",
@@ -95,10 +95,10 @@ class Pipeline:
             "BOOKING_ARRIVAL_TIME_UTC",
             "UPGRADE_TYPE",
         ]
-        lst.append(
+        cols_to_drop.append(
             "UPGRADE_SALES_DATE"
         ) if self.model_type == "predict_upgrade" else None
-        return lst
+        return cols_to_drop
 
     def prepare_new_cols_for_predict_when_model(self) -> None:
         self.df["purchase_time_diff"] = (
@@ -357,7 +357,7 @@ class Pipeline:
         logger.info("scaled features")
 
     def get_cols_to_scale(self) -> list:
-        lst = [
+        cols_to_scale = [
             "COUPON_NUMBER",
             "FLIGHT_DISTANCE",
             "TOTAL_PRICE_PLN",
@@ -368,11 +368,11 @@ class Pipeline:
             "flight_len",
             "intinerary_len",
         ]
-        lst.append(
+        cols_to_scale.append(
             "purchase_time_diff"
         ) if self.model_type == "predict_when_upgrade" else None
-        return lst
+        return cols_to_scale
 
 
 if __name__ == "__main__":
-    d = Pipeline(model_type="predict_upgrade").df
+    d = Pipeline(model_type="predict_when_upgrade").df
