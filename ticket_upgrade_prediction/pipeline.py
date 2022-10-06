@@ -347,7 +347,7 @@ class Pipeline:
         X_train[self.get_cols_to_scale()] = self.scaler.fit_transform(
             X_train[self.get_cols_to_scale()]
         )
-        X_test = self.scaler.transform(X_test[self.get_cols_to_scale()])
+        X_test[self.get_cols_to_scale()] = self.scaler.transform(X_test[self.get_cols_to_scale()])
         self.df = {
             "X_train": X_train,
             "X_test": X_test,
