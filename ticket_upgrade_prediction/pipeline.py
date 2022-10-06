@@ -391,4 +391,4 @@ if __name__ == "__main__":
     )  # this is how you access df if you need it for k-fold, plain df without splitting
     dict_with_split_sets = (
         d.scale_final_dataset()
-    )  # this is how you access df if you dont do kfold cross-validation
+    )  # this is how you access df if you don't do kfold cross-validation
