@@ -1,36 +1,45 @@
-import os
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from loguru import logger
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+
+@dataclass
+class Dataset:
+    X_train: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: pd.Series
+    y_test: pd.Series
 
 
 class Pipeline:
     def __init__(
         self,
-        data_path: str = Path(__file__) / ".." / ".." / "WEC2022_Data",
-        data_type: str = "train",
+        data_path: str = Path(__file__).parents[1] / "WEC2022_Data",
         model_type: str = "predict_upgrade",
     ):
+        self.target = (
+            "UPGRADE_SALES_DATE"
+            if model_type == "predict_when_upgrade"
+            else "UPGRADED_FLAG"
+        )
         self.data_path = data_path
-        self.data_type = data_type
         self.model_type = model_type
+        self.scaler = StandardScaler()
         self.df = self.merge_files()
-        self.concat_df_with_oh_encoding()
 
     def read_csv_file(self, file_prefix) -> pd.DataFrame:
         return pd.read_csv(
-            self.data_path / f"{file_prefix}_{self.data_type}.csv", sep=";"
+            self.data_path / f"{file_prefix}_train.csv", sep=";"
         )
 
     def read_all_files(self) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
-        bkg = (
-            self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
-            if self.data_type == "train"
-            else self.read_csv_file("BKG")
-        )
+        bkg = self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
         logger.info("loaded booking data")
         tkt = self.read_csv_file("TKT")
         logger.info("loaded ticket data")
@@ -44,6 +53,10 @@ class Pipeline:
             else fcp,
         )
 
+    @staticmethod
+    def get_bkg_drop_cols() -> list:
+        return ["UPGRADED_FLAG", "UPGRADE_TYPE", "UPGRADE_SALES_DATE"]
+
     def merge_files(self) -> pd.DataFrame:
         bkg, tkt, fcp = self.read_all_files()
         logger.info(f"{datetime.now()} merging datasets")
@@ -55,13 +68,8 @@ class Pipeline:
     def discard_nonupgraded_rows(fcp: pd.DataFrame) -> pd.DataFrame:
         return fcp[fcp["UPGRADED_FLAG"] == "Y"]
 
-    @staticmethod
-    def get_bkg_drop_cols() -> list:
-        return ["UPGRADED_FLAG", "UPGRADE_TYPE", "UPGRADE_SALES_DATE"]
-
-    @staticmethod
-    def get_columns_to_drop() -> list:
-        return [
+    def get_columns_to_drop(self) -> list:
+        cols_to_drop = [
             "TICKET_NUMBER",
             "ORIGIN_AIRPORT_CODE",
             "DESTINATION_AIRPORT_CODE",
@@ -92,16 +100,12 @@ class Pipeline:
             "BOOKING_DESTINATION_AIRPORT",
             "BOOKING_DESTINATION_COUNTRY_CODE",
             "BOOKING_ARRIVAL_TIME_UTC",
+            "UPGRADE_TYPE",
         ]
-
-    def get_cols_to_drop_for_training(self) -> list:
-        cols = ["UPGRADE_TYPE"]
-        cols.append(
+        cols_to_drop.append(
             "UPGRADE_SALES_DATE"
-        ) if self.model_type == "predict_upgrade" else cols.append(
-            "UPGRADED_FLAG"
-        )
-        return cols
+        ) if self.model_type == "predict_upgrade" else None
+        return cols_to_drop
 
     def prepare_new_cols_for_predict_when_model(self) -> None:
         self.df["purchase_time_diff"] = (
@@ -298,7 +302,7 @@ class Pipeline:
         self.check_for_add_upgrade()
         self.check_for_same_carrier()
         self.check_for_sus_aircraft()
-        self.map_target_variable_for_training() if self.data_type == "train" else None
+        self.map_target_variable_for_training()
         self.check_for_sus_payment()
         self.get_intinerary_len()
         self.check_for_sus_currency()
@@ -307,12 +311,8 @@ class Pipeline:
         self.map_loyal_customer()
         self.map_booking_long_houl_flag()
         self.map_booking_domestic_flag()
-        self.df = (
-            self.df.drop(columns=self.get_cols_to_drop_for_training())
-            if self.data_type == "train"
-            else self.df
-        )
         self.df.drop(columns=self.get_columns_to_drop(), inplace=True)
+        self.df.dropna(inplace=True)
         logger.info(f"dropped unnecessary columns. finished cleaning df")
 
     @staticmethod
@@ -340,6 +340,55 @@ class Pipeline:
             columns=self.get_oh_cols()
         )
 
+    def scale_final_dataset(self) -> Dataset:
+        self.concat_df_with_oh_encoding()
+        X_train, X_test, y_train, y_test = train_test_split(
+            self.df.drop(columns=self.target),
+            self.df[self.target],
+            test_size=0.2,
+            random_state=69420,
+            stratify=self.df[self.target]
+            if self.model_type == "predict_upgrade"
+            else None,
+        )
+        X_train[self.get_cols_to_scale()] = self.scaler.fit_transform(
+            X_train[self.get_cols_to_scale()]
+        )
+        X_test[self.get_cols_to_scale()] = self.scaler.transform(
+            X_test[self.get_cols_to_scale()]
+        )
+        logger.info("scaled features")
+        return Dataset(
+            X_train=X_train,
+            X_test=X_test,
+            y_train=y_train,
+            y_test=y_test,
+        )
+
+    def get_cols_to_scale(self) -> list:
+        cols_to_scale = [
+            "COUPON_NUMBER",
+            "FLIGHT_DISTANCE",
+            "TOTAL_PRICE_PLN",
+            "BOOKING_WINDOW_D",
+            "STAY_LENGTH_D",
+            "PAX_N",
+            "sale_to_flight_time",
+            "flight_len",
+            "intinerary_len",
+        ]
+        cols_to_scale.append(
+            "purchase_time_diff"
+        ) if self.model_type == "predict_when_upgrade" else None
+        return cols_to_scale
+
 
 if __name__ == "__main__":
-    d = Pipeline(model_type="predict_when_upgrade").df
+    d = Pipeline(model_type="predict_when_upgrade")
+    d.get_oh_encoding()
+    df = (
+        d.df
+    )  # this is how you access df if you need it for k-fold, plain df without splitting
+    dict_with_split_sets = (
+        d.scale_final_dataset()
+    )  # this is how you access df if you don't do kfold cross-validation
