@@ -47,7 +47,8 @@ class LassoModel(BaseModel):
         self.model = model_info._model_impl
 
     def save_model_to_pickle(self, model_name):
-        pickle.dump(self.model, open(f"{model_name}.pkl", "wb"))
+        with open(f"{model_name}.pkl", "wb") as file:
+            pickle.dump(self.model, file)
 
     def save_model_to_mlflow(self, model_name, artifact_path, X_test, y_test):
         with mlflow.start_run():
