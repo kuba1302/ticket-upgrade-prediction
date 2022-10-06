@@ -1,4 +1,4 @@
-import os
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -7,6 +7,14 @@ import pandas as pd
 from loguru import logger
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+
+@dataclass
+class Dataset:
+    X_train: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: pd.Series
+    y_test: pd.Series
 
 
 class Pipeline:
@@ -24,7 +32,6 @@ class Pipeline:
         self.model_type = model_type
         self.scaler = StandardScaler()
         self.df = self.merge_files()
-        self.scale_final_dataset()
 
     def read_csv_file(self, file_prefix) -> pd.DataFrame:
         return pd.read_csv(
@@ -333,7 +340,7 @@ class Pipeline:
             columns=self.get_oh_cols()
         )
 
-    def scale_final_dataset(self) -> None:
+    def scale_final_dataset(self) -> Dataset:
         self.concat_df_with_oh_encoding()
         X_train, X_test, y_train, y_test = train_test_split(
             self.df.drop(columns=self.target),
@@ -347,14 +354,16 @@ class Pipeline:
         X_train[self.get_cols_to_scale()] = self.scaler.fit_transform(
             X_train[self.get_cols_to_scale()]
         )
-        X_test[self.get_cols_to_scale()] = self.scaler.transform(X_test[self.get_cols_to_scale()])
-        self.df = {
-            "X_train": X_train,
-            "X_test": X_test,
-            "y_train": y_train,
-            "y_test": y_test,
-        }
+        X_test[self.get_cols_to_scale()] = self.scaler.transform(
+            X_test[self.get_cols_to_scale()]
+        )
         logger.info("scaled features")
+        return Dataset(
+            X_train=X_train,
+            X_test=X_test,
+            y_train=y_train,
+            y_test=y_test,
+        )
 
     def get_cols_to_scale(self) -> list:
         cols_to_scale = [
@@ -375,4 +384,11 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    d = Pipeline(model_type="predict_when_upgrade").df
+    d = Pipeline(model_type="predict_when_upgrade")
+    d.get_oh_encoding()
+    df = (
+        d.df
+    )  # this is how you access df if you need it for k-fold, plain df without splitting
+    dict_with_split_sets = (
+        d.scale_final_dataset()
+    )  # this is how you access df if you dont do kfold cross-validation
