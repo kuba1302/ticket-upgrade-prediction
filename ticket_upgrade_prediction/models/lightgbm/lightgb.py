@@ -1,8 +1,7 @@
 import pickle
 
 import numpy as np
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from lightgb import LGBMClassifier
 
 import mlflow
 from ticket_upgrade_prediction.evaluator import Evaluator
@@ -10,7 +9,7 @@ from ticket_upgrade_prediction.models.base import BaseModel
 from ticket_upgrade_prediction.pipeline import Pipeline
 
 
-class LassoModel(BaseModel):
+class LightGBMModel(BaseModel):
     def __init__(self):
         self.model = None
 
@@ -23,24 +22,16 @@ class LassoModel(BaseModel):
     def fit_model(
         self,
         dataset: dict = Pipeline().df,
-        class_weight_balance: str = "balanced",
-        verbose: int = 2,
-        max_iter: int = 333,
         target: str = "UPGRADED_FLAG",
-    ) -> LogisticRegression:
-        model = LogisticRegression(
-            penalty="l1",
-            solver="saga",
-            class_weight=class_weight_balance,
-            verbose=verbose,
-            max_iter=max_iter,
-        )
+        **kwargs,
+    ) -> LGBMClassifier:
+        model = LGBMClassifier(kwargs)
         model.fit(dataset.X_train, dataset.y_train)
         self.model = model
 
     def get_fitted_model(
-        self, model_name: str = "LASSO", version: int = 1
-    ) -> LogisticRegression:
+        self, model_name: str = "LGBM", version: int = 1
+    ) -> LGBMClassifier:
         model_info = mlflow.pyfunc.load_model(
             model_uri=f"models:/{model_name}/{version}"
         )
@@ -62,5 +53,5 @@ class LassoModel(BaseModel):
 
 
 if __name__ == "__main__":
-    lasso_model = LassoModel()
+    lasso_model = LightGBMModel()
     lasso_model.get_fitted_model(version=1)
