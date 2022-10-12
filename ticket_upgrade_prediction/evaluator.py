@@ -36,9 +36,16 @@ class Metrics:
     recall: float = None
     f1: float = None
     pr_auc: float = None
+    epoch: int = None
 
     def to_dict(self) -> dict:
         return self.__dict__
+
+    @classmethod
+    def from_multiple_metrics(cls, *args):
+        metrics_list = [metric.to_dict() for metric in args]
+        metrics_df = pd.DataFrame(metrics_list).mean()
+        return cls(**metrics_df.to_dict())
 
 
 class BaseEvaluator(ABC):
@@ -132,7 +139,9 @@ class Evaluator(BaseEvaluator):
         precision, recall, _ = self._get_pr_curve_properties()
         return auc(recall, precision)
 
-    def get_all_metrics(self, to_mlflow: bool = False) -> Metrics:
+    def get_all_metrics(
+        self, to_mlflow: bool = False, epoch: int = None
+    ) -> Metrics:
         metrics = Metrics(
             accuracy=self.get_accuracy(),
             roc_auc=self.get_roc_auc(),
@@ -140,6 +149,7 @@ class Evaluator(BaseEvaluator):
             recall=self.get_recall(),
             f1=self.get_f1_score(),
             pr_auc=self.get_pr_auc(),
+            epoch=epoch if epoch else None,
         )
 
         if to_mlflow:
@@ -256,15 +266,15 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=42
     )
-    #model = RandomForestClassifier()
-    #model.fit(X_train, y_train)
-    #evaluator = Evaluator(model=model, X=X_test, y=y_test)
-    #evaluator.plot_precision_recall_curve(save_path=save_path)
-    #evaluator.plot_roc_curve(save_path=save_path)
-    #evaluator.plot_partial_dependency_plot(save_path=save_path)
+    # model = RandomForestClassifier()
+    # model.fit(X_train, y_train)
+    # evaluator = Evaluator(model=model, X=X_test, y=y_test)
+    # evaluator.plot_precision_recall_curve(save_path=save_path)
+    # evaluator.plot_roc_curve(save_path=save_path)
+    # evaluator.plot_partial_dependency_plot(save_path=save_path)
 
-    #print(evaluator.get_all_metrics())
-    mlflow.set_tracking_uri('http://localhost:5000')
+    # print(evaluator.get_all_metrics())
+    mlflow.set_tracking_uri("http://localhost:5000")
     with mlflow.start_run():
         model = RandomForestClassifier()
         model.fit(X_train, y_train)
@@ -273,5 +283,5 @@ if __name__ == "__main__":
         mlflow.sklearn.log_model(
             sk_model=model,
             artifact_path="sklearn-model",
-            registered_model_name='rf_random_data'
+            registered_model_name="rf_random_data",
         )
