@@ -385,7 +385,7 @@ class Pipeline:
 
 if __name__ == "__main__":
     d = Pipeline(model_type="predict_when_upgrade")
-    d.get_oh_encoding()
+    d.concat_df_with_oh_encoding()
     df = (
         d.df
     )  # this is how you access df if you need it for k-fold, plain df without splitting
