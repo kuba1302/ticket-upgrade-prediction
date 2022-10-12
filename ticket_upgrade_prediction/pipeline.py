@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
+
 @dataclass
 class Dataset:
     X_train: pd.DataFrame
@@ -38,7 +39,9 @@ class Pipeline:
             self.data_path / f"{file_prefix}_train.csv", sep=";"
         )
 
-    def read_all_files(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def read_all_files(
+        self,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         bkg = self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
         logger.info("loaded booking data")
         tkt = self.read_csv_file("TKT")

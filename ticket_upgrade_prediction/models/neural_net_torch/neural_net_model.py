@@ -54,4 +54,3 @@ class Network(nn.Module, BaseModel):
         threshold = 0.5
         proba = self.predict_proba(X=X)
         return torch.where(proba >= threshold, 1, 0).numpy()
-
