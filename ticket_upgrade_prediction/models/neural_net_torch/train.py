@@ -3,7 +3,7 @@ from typing import Any
 
 import click
 import pandas as pd
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 import torch
 from data_loader import UpgradeDataset
@@ -94,25 +94,50 @@ class ModelTrainer:
         return self.training_results
 
 
-class KFoldModelTrainer:
+class NeuralNetHyperopt:
     def __init__(
-        self, data: pd.DataFrame, n_splits: int, scaler: Any = StandardScaler
+        self,
+        data: pd.DataFrame,
+        n_splits: int,
+        scaler: Any = StandardScaler,
+        y_col: str = "UPGRADED_FLAG",
+        train_size: float = 0.75,
     ) -> None:
         self.n_splits = n_splits
         self.data = data
         self.scaler = scaler
         self.metrics = []
+        self.y_col = y_col
+        self.train_size = train_size
 
-    def _one_batch_train(self):
+    def _get_random_params_combinations(self):
         pass
 
-    def _train_test_split(self):
-        X_train, X_test, y_train, y_test = train_test_split()
-
-    def hyperopt(self, target_metric):
+    def _one_hparam_combination(self): 
         pass
 
+    def _one_fold_train(self): 
+        pass 
 
+    def hyperopt(self, target_metric: str, params: dict):
+        pass
+
+"""
+1. Podajemy df
+2. Wybieramy losowe kombinacje parametrow
+3. Dla kazdej kombinacji: 
+    - Dzielimy na foldy.
+    - Dla kazdego folda: 
+        - trening modelu
+        - ewaluacja
+        - zapisanie metryk
+    - srednia z metryk 
+    - zapis w mlflow 
+    - trzymamy w pamieci jakie parametry juz poszy (na wypadek jakby sie wypierdolilo)
+
+
+
+"""
 def train_model(
     layers: list = [5],
     optimizer: str = "Adam",
