@@ -10,20 +10,22 @@ import xgb
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 import random
+from sklearn.metrics import accuracy_score
 
 
 class HyperparamPipeline:
-    def __init__(self, X: pd.DataFrame, y: pd.Series, model, param_space: dict, taget_col: str, stratify: bool):
+    def __init__(self, X: pd.DataFrame, y: pd.Series, model: str, param_space: dict, taget_col: str, stratify: bool, cols_to_scale: list, classification: bool, metric: str):
         self.X, self.y = X, y
         self.model = model
+        self.classification = classification
+        self.cols_to_scale = cols_to_scale
         self.target_col = taget_col
         self.pipe = None
+        self.scores = []
+        self.params = []
         self.param_space = param_space
         self.stratify = stratify
         self.best_params = None
-
-    def make_pipeline(self):
-        self.pipe = sk_pipeline(StandardScaler(), self.model)
 
     def search_for_params(self, searching_algo: str = 'random'):
         #wez goly dataset
@@ -47,12 +49,35 @@ class HyperparamPipeline:
 
     def optimize_hypers_using_random_search(self, n_iters, n_splits):
         for i in range(n_iters):
+            iteration_params = self.get_random_params(self.param_space)
             kf = StratifiedKFold(n_splits) if self.stratify else kf = KFold(n_splits)
             for train_index, test_index in kf.split(self.X, self.y):
                 X_train, X_test, y_train, y_test = self.X[train_index], self.X[test_index], self.y[train_index], self.y[test_index]
-                #skalowanie ficzeruw
-                #zrob ewaluacje
-                #zapisz wyniki oraz paramsy
+                scaler = StandardScaler()
+                X_train[self.cols_to_scale] = scaler.fit_transform(
+                    X_train[self.cols_to_scale]
+                )
+                X_test[self.cols_to_scale] = scaler.transform(X_test[self.cols_to_scale])
+                model = self.determine_model(iteration_params)
+                model.fit(X_train, y_train)
+                predictions = model.predict_proba(X_test) if self.classification else model.predict(X_test)
+                self.scores.append(predictions)
+                self.params.append(iteration_params)
+
+    def determine_metric(self, y_pred, y_true):
+        #add support for more metrics
+        if self.metric == 'accuracy_score':
+            return accuracy_score(y_pred, y_true)
+        else:
+            raise ValueError('this model is currently not supported. try any of: xgb')
+
+    def determine_model(self, params):
+        #add support for more models
+        if self.model == 'xgb' and self.classification:
+            return xgb.XGBClassifier(params)
+        else:
+            raise ValueError('this model is currently not supported. try any of: xgb')
+
     def optimize_bayes(self):
         return fmin(self.score,
              self.param_space,
