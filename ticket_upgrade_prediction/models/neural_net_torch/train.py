@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,13 @@ from tqdm import tqdm
 from ticket_upgrade_prediction.pipeline import Dataset
 from ticket_upgrade_prediction import Evaluator, Metrics
 from sklearn.model_selection import train_test_split
+import itertools
+
+@dataclass
+class HyperParams:
+    layers: list[int]
+    optimizer_name: str
+    learning_rate: float
 
 
 class ModelTrainer:
@@ -26,9 +34,8 @@ class ModelTrainer:
         layers: list = [5],
         optimizer_name: str = "Adam",
         epochs: int = 2,
-        learning_rate: int = 0.0001,
+        learning_rate: float = 0.0001,
         batch_size: int = 64,
-        train_size: float = 0.75,
         criterion: Any = BCEWithLogitsLoss,
     ) -> None:
         self.layers = layers
@@ -44,7 +51,6 @@ class ModelTrainer:
         self.epochs = epochs
         self.criterion = criterion
         self.batch_size = batch_size
-        self.train_size = train_size
 
         self.training_results = []
 
@@ -98,29 +104,87 @@ class NeuralNetHyperopt:
     def __init__(
         self,
         data: pd.DataFrame,
-        n_splits: int,
+        hyper_params: dict,
+        n_splits: int = 5,
         scaler: Any = StandardScaler,
         y_col: str = "UPGRADED_FLAG",
         train_size: float = 0.75,
+        per_fold_epoch: int = 10,
+        batch_size: int = 16
     ) -> None:
         self.n_splits = n_splits
         self.data = data
         self.scaler = scaler
+        self.per_fold_epoch = per_fold_epoch
         self.metrics = []
         self.y_col = y_col
+        self.batch_size = batch_size
         self.train_size = train_size
+        self.hyper_params_combinations = self._get_params_combinations(
+            hyper_params=hyper_params
+        )
 
-    def _get_random_params_combinations(self):
+    def _get_params_combinations(self, hyper_params) -> list[dict]:
+        keys, values = zip(*hyper_params.items())
+        return [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    def _one_hparam_combination(self, hparams):
+        s_kfold = StratifiedKFold(n_splits=self.n_splits)
+        metrics_list = []
+
+        for train_index, test_index in s_kfold.split(
+            self.data.drop(columns=self.y_col), self.data[:, self.y_col]
+        ):
+            dataset = Dataset(
+                X_train=self.data.loc[train_index, :].drop(columns=self.y_col),
+                X_test=self.data.loc[test_index, :].drop(columns=self.y_col),
+                y_train=self.data.loc[train_index, self.y_col],
+                y_test=self.data.loc[test_index, self.y_col],
+            )
+            hyper_params = HyperParams(
+                layers=hparams["layers"],
+                optimizer_name=hparams["optimizer_name"],
+                learning_rate=hparams["learning_rate"],
+            )
+            trainer = ModelTrainer(
+                dataset=dataset,
+                layers=hyper_params.layers,
+                optimizer_name=hyper_params.optimizer_name,
+                epochs=self.per_fold_epoch, 
+                learning_rate=hyper_params.learning_rate, 
+                batch_size=self.batch_size, 
+            )
+            
+            trainer.fit()
+            # In future - change last merics to best metrics? 
+            last_metrics = trainer.get_results()[-1]
+            metrics_list.append(last_metrics)
+        
+        return Metrics.from_multiple_metrics(*metrics_list)
+
+    def _one_fold_train(self):
         pass
 
-    def _one_hparam_combination(self): 
+    def hyperopt(
+        self,
+        target_metric: str,
+        params: dict,
+        number_of_hparams_combinations: int,
+    ):
+        param_combinations: list[dict] = self._get_params_combinations()
+
+        for param_combination in param_combinations[
+            :number_of_hparams_combinations
+        ]:
+            result = self._one_hparam_combination()
+            self.metrics.append(result)
+
+    def get_metrics(self):
+        return self.metrics
+
+    def get_highest_metric(self):
         pass
 
-    def _one_fold_train(self): 
-        pass 
-
-    def hyperopt(self, target_metric: str, params: dict):
-        pass
 
 """
 1. Podajemy df
@@ -138,6 +202,8 @@ class NeuralNetHyperopt:
 
 
 """
+
+
 def train_model(
     layers: list = [5],
     optimizer: str = "Adam",
