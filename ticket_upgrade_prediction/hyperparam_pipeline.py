@@ -2,40 +2,38 @@ from sklearn.pipeline import Pipeline as sk_pipeline
 from ticket_upgrade_prediction.pipeline import Pipeline as df_pipeline
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 from loguru import logger
-import xgb
+import xgboost as xgb
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 import random
 from sklearn.metrics import accuracy_score
 import itertools
 import numpy as np
+from sklearn.datasets import make_classification
+import warnings
+from pandas.core.common import SettingWithCopyWarning
+warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 
 class HyperparamPipeline:
-    def __init__(self, X: pd.DataFrame, y: pd.Series, model: str, param_space: dict, taget_col: str, stratify: bool, cols_to_scale: list, classification: bool, metric: str):
+    def __init__(self, X: pd.DataFrame, y: pd.Series, model: str, param_space: dict, stratify: bool, cols_to_scale: list, classification: bool, metric: str):
         self.X, self.y = X, y
         self.model = model
         self.classification = classification
         self.cols_to_scale = cols_to_scale
-        self.target_col = taget_col
-        self.pipe = None
+        self.metric = metric
         self.scores = []
         self.params = []
         self.param_space = param_space
         self.stratify = stratify
-        self.best_params = None
 
     def get_best_params(self):
         return self.params[np.argmax(self.scores)], np.max(self.scores)
 
     def search_for_params(self, searching_algo: str = 'random', n_splits: int = 5, **kwargs):
-        #dodatkowa metoda do wyciagniecia najlepszego wyniku + hiperkow
         if searching_algo == 'random':
-            self.optimize_hypers_using_random_search(n_splits, kwargs)
+            self.optimize_hypers_using_random_search(n_splits, kwargs['n_iters'])
         elif searching_algo == 'grid':
             self.optimize_hypers_using_grid_search(n_splits)
         else:
@@ -43,7 +41,7 @@ class HyperparamPipeline:
 
     @staticmethod
     def get_random_params(param_space):
-        return {k: random.choice(v) for k, v in param_space.items()}
+        return {k: (random.choice(v) if type(v) == list else v) for k, v in param_space.items()}
 
     def optimize_hypers_using_grid_search(self, n_splits):
         perm_dicts = self.get_permutation_dicts(self.param_space)
@@ -63,14 +61,14 @@ class HyperparamPipeline:
             self.create_splits_and_calc_scores(n_splits, iteration_params)
 
     def create_splits_and_calc_scores(self, n_splits, iteration_params):
-        kf = StratifiedKFold(n_splits) if self.stratify else kf = KFold(n_splits)
+        kf = StratifiedKFold(n_splits) if self.stratify else KFold(n_splits)
         self.scores.append(np.mean(
             [self.create_preds_for_hypers(train_index, test_index, iteration_params) for train_index, test_index in
              kf.split(self.X, self.y)]))
 
     def get_scaled_train_and_test_sets(self, train_index, test_index):
         scaler = StandardScaler()
-        X_train, X_test, y_train, y_test = self.X[train_index], self.X[test_index], self.y[train_index], self.y[
+        X_train, X_test, y_train, y_test = self.X.iloc[train_index], self.X.iloc[test_index], self.y.iloc[train_index], self.y.iloc[
             test_index]
         X_train[self.cols_to_scale] = scaler.fit_transform(
             X_train[self.cols_to_scale]
@@ -82,7 +80,8 @@ class HyperparamPipeline:
         model = self.determine_model(iteration_params)
         X_train, X_test, y_train, y_test = self.get_scaled_train_and_test_sets(train_index, test_index)
         model.fit(X_train, y_train)
-        predictions = model.predict_proba(X_test) if self.classification else model.predict(X_test)
+        #predictions = model.predict_proba(X_test)[:, 1] if self.classification else model.predict(X_test)
+        predictions = model.predict(X_test)
         return self.calculate_metric(predictions, y_test)
 
     def calculate_metric(self, y_pred, y_true):
@@ -95,12 +94,24 @@ class HyperparamPipeline:
     def determine_model(self, params):
         #add support for more models
         if self.model == 'xgb' and self.classification:
-            return xgb.XGBClassifier(params)
+            return xgb.XGBClassifier(**params)
         else:
             raise ValueError('this model is currently not supported. try any of: xgb')
 
 
 if __name__ == '__main__':
-    d = df_pipeline(model_type="predict_when_upgrade")
-    d.get_oh_encoding()
-    df = d.df
+    X, y = make_classification(n_samples=10000, weights=[0.5])
+    X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
+    y = pd.DataFrame(data=y, columns=["y"])
+    space = {
+        "n_estimators": [5, 10, 15],
+        "eta": [0.025, 0.5, 0.025],
+        "max_depth": [4, 8, 12],
+        "min_child_weight": [2, 4, 6],
+        "subsample": [0.5, 0.6],
+        "gamma": [0.6, 0.7],
+        "objective": "binary:logistic",
+        "verbosity": 0
+    }
+    hp = HyperparamPipeline(X, y, model='xgb', param_space=space, stratify=True, cols_to_scale=X.columns, classification=True, metric='accuracy_score')
+    hp.search_for_params(searching_algo='random', n_splits=5, n_iters=10)
