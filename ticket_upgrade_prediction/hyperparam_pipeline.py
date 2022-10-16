@@ -38,8 +38,6 @@ class HyperparamPipeline:
             pass
         elif searching_algo == 'grid':
             pass
-        elif searching_algo == 'bayes':
-            self.best_params = self.optimize_bayes()
         else:
             raise ValueError('Unrecognizable searching_algo param. Currently available are: random, grid, bayes.')
 
@@ -85,37 +83,6 @@ class HyperparamPipeline:
             return xgb.XGBClassifier(params)
         else:
             raise ValueError('this model is currently not supported. try any of: xgb')
-
-    def optimize_bayes(self):
-        return fmin(self.score,
-             self.param_space,
-             algo=tpe.suggest,
-             trials=self.trials,
-             max_evals=50)
-
-    #def prepare_dmatrices_for_xgb(self):
-    #    return xgb.DMatrix(self.dataset[col for col  in self.dataset.columns if col != self.train_cols],
-    #    label=self.dataset[self.test_cols]), xgb.DMatrix(X_test, label=y_test)
-
-    #def score(self, params):
-    #    print("Training with params: ")
-    #    print(params)
-    #    if 'n_estimators' in params:
-    #        num_round = int(params['n_estimators'])
-    #        del params['n_estimators']
-    #
-    #    #watchlist = [(dtrain, 'train'), (dvalid, 'eval')]
-    #    model_for_training = self.model.train(self.param_space)
-    #    gbm_model = xgb.train(params, dtrain, num_round,
-    #                          verbose_eval=True, evals=watchlist,
-    #                          early_stopping_rounds=20)
-    #    predictions = gbm_model.predict(dvalid,
-    #                                    ntree_limit=gbm_model.best_iteration + 1)
-    #    score = roc_auc_score(y_test, predictions)
-    #    print("\tScore {0}\n\n".format(score))
-    #    loss = 1 - score
-    #    return {'loss': loss, 'status': STATUS_OK}
-
 
 
 if __name__ == '__main__':
