@@ -50,21 +50,29 @@ class HyperparamPipeline:
     def optimize_hypers_using_random_search(self, n_iters, n_splits):
         for i in range(n_iters):
             iteration_params = self.get_random_params(self.param_space)
+            self.params.append(iteration_params)
             kf = StratifiedKFold(n_splits) if self.stratify else kf = KFold(n_splits)
             for train_index, test_index in kf.split(self.X, self.y):
-                X_train, X_test, y_train, y_test = self.X[train_index], self.X[test_index], self.y[train_index], self.y[test_index]
-                scaler = StandardScaler()
-                X_train[self.cols_to_scale] = scaler.fit_transform(
-                    X_train[self.cols_to_scale]
-                )
-                X_test[self.cols_to_scale] = scaler.transform(X_test[self.cols_to_scale])
-                model = self.determine_model(iteration_params)
-                model.fit(X_train, y_train)
-                predictions = model.predict_proba(X_test) if self.classification else model.predict(X_test)
-                self.scores.append(predictions)
-                self.params.append(iteration_params)
+                self.create_preds_for_hypers(train_index, test_index, iteration_params)
 
-    def determine_metric(self, y_pred, y_true):
+    def get_scaled_train_and_test_sets(self, train_index, test_index):
+        scaler = StandardScaler()
+        X_train, X_test, y_train, y_test = self.X[train_index], self.X[test_index], self.y[train_index], self.y[
+            test_index]
+        X_train[self.cols_to_scale] = scaler.fit_transform(
+            X_train[self.cols_to_scale]
+        )
+        X_test[self.cols_to_scale] = scaler.transform(X_test[self.cols_to_scale])
+        return X_train, X_test, y_train, y_test
+
+    def create_preds_for_hypers(self, train_index, test_index, iteration_params):
+        model = self.determine_model(iteration_params)
+        X_train, X_test, y_train, y_test = self.get_scaled_train_and_test_sets(train_index, test_index)
+        model.fit(X_train, y_train)
+        predictions = model.predict_proba(X_test) if self.classification else model.predict(X_test)
+        self.scores.append(self.calculate_metric(predictions, y_test))
+
+    def calculate_metric(self, y_pred, y_true):
         #add support for more metrics
         if self.metric == 'accuracy_score':
             return accuracy_score(y_pred, y_true)
