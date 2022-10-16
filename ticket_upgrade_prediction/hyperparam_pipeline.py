@@ -11,6 +11,7 @@ from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 import random
 from sklearn.metrics import accuracy_score
+import itertools
 
 
 class HyperparamPipeline:
@@ -27,7 +28,7 @@ class HyperparamPipeline:
         self.stratify = stratify
         self.best_params = None
 
-    def search_for_params(self, searching_algo: str = 'random'):
+    def search_for_params(self, searching_algo: str = 'random', n_splits: int = 5, **kwargs):
         #wez goly dataset
         #wylosuj parametry (albo wez kolejne z grida)
         #wylosuj probke pod kfold x-validation
@@ -35,7 +36,7 @@ class HyperparamPipeline:
         #zapisz gdzies sredni wynik z walidacji (oraz paramsy)
         #dodatkowa metoda do wyciagniecia najlepszego wyniku + hiperkow
         if searching_algo == 'random':
-            pass
+            self.optimize_hypers_using_random_search(n_splits, kwargs)
         elif searching_algo == 'grid':
             pass
         else:
@@ -45,7 +46,20 @@ class HyperparamPipeline:
     def get_random_params(param_space):
         return {k: random.choice(v) for k, v in param_space.items()}
 
-    def optimize_hypers_using_random_search(self, n_iters, n_splits):
+    def optimize_hypers_using_grid_search(self, n_splits):
+        perm_dicts = self.get_permutation_dicts(self.param_space)
+        for iteration_params in perm_dicts:
+            self.params.append(iteration_params)
+            kf = StratifiedKFold(n_splits) if self.stratify else kf = KFold(n_splits)
+            for train_index, test_index in kf.split(self.X, self.y):
+                self.create_preds_for_hypers(train_index, test_index, iteration_params)
+
+    @staticmethod
+    def get_permutation_dicts(param_space):
+        keys, values = zip(*param_space.values())
+        return [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    def optimize_hypers_using_random_search(self, n_splits, n_iters):
         for i in range(n_iters):
             iteration_params = self.get_random_params(self.param_space)
             self.params.append(iteration_params)
