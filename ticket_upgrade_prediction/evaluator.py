@@ -149,7 +149,7 @@ class Evaluator(BaseEvaluator):
             recall=self.get_recall(),
             f1=self.get_f1_score(),
             pr_auc=self.get_pr_auc(),
-            epoch=epoch if epoch else None,
+            epoch=epoch,
         )
 
         if to_mlflow:

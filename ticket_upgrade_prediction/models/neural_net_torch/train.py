@@ -1,3 +1,4 @@
+from copyreg import pickle
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,10 @@ from ticket_upgrade_prediction.pipeline import Dataset
 from ticket_upgrade_prediction import Evaluator, Metrics
 from sklearn.model_selection import train_test_split
 import itertools
+import mlflow
+from ticket_upgrade_prediction.pipeline import Pipeline
+from ticket_upgrade_prediction.config.env_config import EXPERIMENT_NAME
+
 
 @dataclass
 class HyperParams:
@@ -27,7 +32,7 @@ class HyperParams:
     learning_rate: float
 
 
-class ModelTrainer:
+class NetworkTrainer:
     def __init__(
         self,
         dataset: Dataset,
@@ -36,9 +41,10 @@ class ModelTrainer:
         epochs: int = 2,
         learning_rate: float = 0.0001,
         batch_size: int = 64,
-        criterion: Any = BCEWithLogitsLoss,
+        criterion: Any = BCEWithLogitsLoss(),
     ) -> None:
         self.layers = layers
+        self.dataset = dataset
         self.model = Network(
             input_size=dataset.X_train.shape[1], hidden_layers_sizes=layers
         )
@@ -58,9 +64,9 @@ class ModelTrainer:
         self, optimizer_name: str, learning_rate: float
     ) -> None:
         if optimizer_name.lower() == "adam":
-            self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
+            return Adam(self.model.parameters(), lr=learning_rate)
         elif optimizer_name.lower() == "sgd":
-            self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
+            return SGD(self.model.parameters(), lr=learning_rate)
         else:
             raise ValueError("Wrong type of optimizer provided!")
 
@@ -75,7 +81,7 @@ class ModelTrainer:
         loss.backward()
         self.optimizer.step()
 
-    def fit(self, to_mlflow: bool = False):
+    def _fit(self, to_mlflow: bool = False):
         train_dataset = UpgradeDataset(
             X=self.dataset.X_train, y=self.dataset.y_train.values
         )
@@ -85,8 +91,28 @@ class ModelTrainer:
         for epoch in tqdm(range(self.epochs), desc="Epoch"):
             for X, y in tqdm(iter(train_loader), desc="Batch"):
                 self._one_batch(X=X, y=y)
-                with torch.no_grad():
-                    self._evaluate(to_mlflow=to_mlflow, epoch=epoch)
+
+            with torch.no_grad():
+                self._evaluate(to_mlflow=to_mlflow, epoch=epoch)
+
+    def fit(
+        self,
+        mlflow_run_name: str = None,
+    ) -> None:
+        to_mlflow = True if mlflow_run_name else False
+
+        if to_mlflow:
+            client = mlflow.MlflowClient()
+            experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
+
+            with mlflow.start_run(
+                run_name=mlflow_run_name,
+                experiment_id=experiment.experiment_id,
+            ):
+                self._fit(to_mlflow=to_mlflow)
+
+        else:
+            self._fit(to_mlflow=to_mlflow)
 
     def _evaluate(self, to_mlflow: bool, epoch: int) -> None:
         evaluator = Evaluator(
@@ -110,7 +136,7 @@ class NeuralNetHyperopt:
         y_col: str = "UPGRADED_FLAG",
         train_size: float = 0.75,
         per_fold_epoch: int = 10,
-        batch_size: int = 16
+        batch_size: int = 16,
     ) -> None:
         self.n_splits = n_splits
         self.data = data
@@ -128,7 +154,7 @@ class NeuralNetHyperopt:
         keys, values = zip(*hyper_params.items())
         return [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    def _one_hparam_combination(self, hparams):
+    def _one_hparam_combination(self, hparams, to_mlflow: bool):
         s_kfold = StratifiedKFold(n_splits=self.n_splits)
         metrics_list = []
 
@@ -146,30 +172,33 @@ class NeuralNetHyperopt:
                 optimizer_name=hparams["optimizer_name"],
                 learning_rate=hparams["learning_rate"],
             )
-            trainer = ModelTrainer(
+            trainer = NetworkTrainer(
                 dataset=dataset,
                 layers=hyper_params.layers,
                 optimizer_name=hyper_params.optimizer_name,
-                epochs=self.per_fold_epoch, 
-                learning_rate=hyper_params.learning_rate, 
-                batch_size=self.batch_size, 
+                epochs=self.per_fold_epoch,
+                learning_rate=hyper_params.learning_rate,
+                batch_size=self.batch_size,
             )
-            
+
             trainer.fit()
-            # In future - change last merics to best metrics? 
+            # In future - change last merics to best metrics?
             last_metrics = trainer.get_results()[-1]
             metrics_list.append(last_metrics)
-        
+
+        if to_mlflow:
+            m
         return Metrics.from_multiple_metrics(*metrics_list)
 
     def _one_fold_train(self):
         pass
 
-    def hyperopt(
+    def _hyperopt(
         self,
         target_metric: str,
         params: dict,
         number_of_hparams_combinations: int,
+        to_mlflow: bool = False,
     ):
         param_combinations: list[dict] = self._get_params_combinations()
 
@@ -178,6 +207,25 @@ class NeuralNetHyperopt:
         ]:
             result = self._one_hparam_combination()
             self.metrics.append(result)
+
+    def hyperopt(
+        self,
+        mlflow_run_name: str = None,
+    ) -> None:
+        to_mlflow = True if mlflow_run_name else False
+
+        if to_mlflow:
+            client = mlflow.MlflowClient()
+            experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
+
+            with mlflow.start_run(
+                run_name=mlflow_run_name,
+                experiment_id=experiment.experiment_id,
+            ):
+                self._hyperopt(to_mlflow=to_mlflow)
+
+        else:
+            self._hyperopt(to_mlflow=to_mlflow)
 
     def get_metrics(self):
         return self.metrics
@@ -216,7 +264,7 @@ def train_model(
     data_path = str(
         Path(__file__).parents[3] / "data" / "preprocessed_upgrade.csv",
     )
-    data = pd.read_csv(data_path).dropna()
+    data = pd.read_csv(data_path).dropna().head(1000)
 
     y_col = "UPGRADED_FLAG"
     X_train, X_test, y_train, y_test = train_test_split(
@@ -264,45 +312,54 @@ def train_model(
                 training_results.append(metrics)
 
 
-@click.command()
-@click.option(
-    "--layers",
-    "-l",
-    multiple=True,
-    required=True,
-    type=int,
-)
-@click.option(
-    "--optimizer",
-    "-o",
-    type=click.Choice(
-        ["Adam", "SGD"],
-        case_sensitive=False,
-    ),
-    default="Adam",
-)
-@click.option("--epochs", "-e", default=10, type=int)
-@click.option("--learning-rate", "-lr", default=0.001, type=int)
-@click.option("--batch-size", "-b", default=64, type=int)
-@click.option("--train-size", "-tr", default=0.75, type=float)
-def main(
-    layers: list,
-    optimizer: str,
-    epochs: int,
-    learning_rate: int,
-    batch_size: int,
-    train_size: float,
-):
-    print(layers)
-    train_model(
-        layers=layers,
-        optimizer=optimizer,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
-        train_size=train_size,
-    )
+# @click.command()
+# @click.option(
+#     "--layers",
+#     "-l",
+#     multiple=True,
+#     required=True,
+#     type=int,
+# )
+# @click.option(
+#     "--optimizer",
+#     "-o",
+#     type=click.Choice(
+#         ["Adam", "SGD"],
+#         case_sensitive=False,
+#     ),
+#     default="Adam",
+# )
+# @click.option("--epochs", "-e", default=10, type=int)
+# @click.option("--learning-rate", "-lr", default=0.001, type=int)
+# @click.option("--batch-size", "-b", default=64, type=int)
+# @click.option("--train-size", "-tr", default=0.75, type=float)
+# def main(
+#     layers: list,
+#     optimizer: str,
+#     epochs: int,
+#     learning_rate: int,
+#     batch_size: int,
+#     train_size: float,
+# ):
+#     train_model(
+#         layers=layers,
+#         optimizer=optimizer,
+#         epochs=epochs,
+#         learning_rate=learning_rate,
+#         batch_size=batch_size,
+#         train_size=train_size,
+#     )
 
 
 if __name__ == "__main__":
-    main()
+    import pickle
+
+    data_path = Path(__file__).parents[3] / "data" / "dataset.pickle"
+    with open(data_path, "rb") as file:
+        dataset = pickle.load(file)
+
+    dataset = dataset.get_sample(10000)
+    print(dataset.get_shapes())
+
+    trainer = NetworkTrainer(dataset=dataset, epochs=20)
+    trainer.fit(mlflow_run_name="Neural-net-test")
