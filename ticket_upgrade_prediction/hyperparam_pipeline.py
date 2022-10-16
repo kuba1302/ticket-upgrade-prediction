@@ -8,7 +8,6 @@ from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 import random
 from sklearn.metrics import accuracy_score
-import itertools
 import numpy as np
 from sklearn.datasets import make_classification
 import warnings
@@ -19,6 +18,7 @@ from sklearn.exceptions import DataConversionWarning
 warnings.filterwarnings(action='ignore', category=DataConversionWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter("ignore", UserWarning)
+from typing import Tuple
 
 
 class HyperparamPipeline:
@@ -33,10 +33,10 @@ class HyperparamPipeline:
         self.param_space = param_space
         self.stratify = stratify
 
-    def get_best_params(self):
+    def get_best_params(self) -> Tuple[dict, float]:
         return self.params[np.argmax(self.scores)], np.max(self.scores)
 
-    def search_for_params(self, searching_algo: str = 'random', n_splits: int = 5, **kwargs):
+    def search_for_params(self, searching_algo: str = 'random', n_splits: int = 5, **kwargs) -> None:
         logger.info(f"starting to serach for params using {searching_algo} search")
         if searching_algo == 'random':
             self.optimize_hypers_using_random_search(n_splits, kwargs['n_iters'])
@@ -46,17 +46,17 @@ class HyperparamPipeline:
             raise ValueError('Unrecognizable searching_algo param. Currently available are: random, grid, bayes.')
 
     @staticmethod
-    def get_random_params(param_space):
+    def get_random_params(param_space: dict) -> dict:
         return {k: (random.choice(v) if type(v) == list else v) for k, v in param_space.items()}
 
-    def optimize_hypers_using_grid_search(self, n_splits):
+    def optimize_hypers_using_grid_search(self, n_splits: int) -> None:
         for iteration_params in ParameterGrid(self.param_space):
             self.params.append(iteration_params)
             score = self.create_splits_and_calc_scores(n_splits, iteration_params)
             logger.info(f'score for params {iteration_params} -> {score}')
             self.scores.append(score)
 
-    def optimize_hypers_using_random_search(self, n_splits, n_iters):
+    def optimize_hypers_using_random_search(self, n_splits: int, n_iters: int) -> None:
         for i in range(n_iters):
             iteration_params = self.get_random_params(self.param_space)
             self.params.append(iteration_params)
@@ -64,13 +64,13 @@ class HyperparamPipeline:
             logger.info(f'score for params {iteration_params} -> {score}')
             self.scores.append(score)
 
-    def create_splits_and_calc_scores(self, n_splits, iteration_params):
+    def create_splits_and_calc_scores(self, n_splits: int, iteration_params: dict) -> float:
         kf = StratifiedKFold(n_splits) if self.stratify else KFold(n_splits)
         return np.mean(
             [self.create_preds_for_hypers(train_index, test_index, iteration_params) for train_index, test_index in
              kf.split(self.X, self.y)])
 
-    def get_scaled_train_and_test_sets(self, train_index, test_index):
+    def get_scaled_train_and_test_sets(self, train_index: np.ndarray, test_index: np.ndarray) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         scaler = StandardScaler()
         X_train, X_test, y_train, y_test = self.X.iloc[train_index], self.X.iloc[test_index], self.y.iloc[train_index], self.y.iloc[
             test_index]
@@ -80,7 +80,7 @@ class HyperparamPipeline:
         X_test[self.cols_to_scale] = scaler.transform(X_test[self.cols_to_scale])
         return X_train, X_test, y_train, y_test
 
-    def create_preds_for_hypers(self, train_index, test_index, iteration_params):
+    def create_preds_for_hypers(self, train_index: np.ndarray, test_index: np.ndarray, iteration_params: dict) -> float:
         model = self.determine_model(iteration_params)
         X_train, X_test, y_train, y_test = self.get_scaled_train_and_test_sets(train_index, test_index)
         model.fit(X_train, y_train)
@@ -88,14 +88,14 @@ class HyperparamPipeline:
         predictions = model.predict(X_test)
         return self.calculate_metric(predictions, y_test)
 
-    def calculate_metric(self, y_pred, y_true):
+    def calculate_metric(self, y_pred: pd.Series, y_true: pd.Series) -> float:
         #add support for more metrics
         if self.metric == 'accuracy_score':
             return accuracy_score(y_pred, y_true)
         else:
             raise ValueError('this model is currently not supported. try any of: xgb')
 
-    def determine_model(self, params):
+    def determine_model(self, params: dict):
         #add support for more models
         if self.model == 'xgb' and self.classification:
             return xgb.XGBClassifier(objective='binary:logistic', verbosity=0, **params)
