@@ -12,8 +12,13 @@ import itertools
 import numpy as np
 from sklearn.datasets import make_classification
 import warnings
+from sklearn.model_selection import ParameterGrid
 from pandas.core.common import SettingWithCopyWarning
 warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
+from sklearn.exceptions import DataConversionWarning
+warnings.filterwarnings(action='ignore', category=DataConversionWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter("ignore", UserWarning)
 
 
 class HyperparamPipeline:
@@ -45,17 +50,11 @@ class HyperparamPipeline:
         return {k: (random.choice(v) if type(v) == list else v) for k, v in param_space.items()}
 
     def optimize_hypers_using_grid_search(self, n_splits):
-        perm_dicts = self.get_permutation_dicts(self.param_space)
-        for iteration_params in perm_dicts:
+        for iteration_params in ParameterGrid(self.param_space):
             self.params.append(iteration_params)
             score = self.create_splits_and_calc_scores(n_splits, iteration_params)
             logger.info(f'score for params {iteration_params} -> {score}')
             self.scores.append(score)
-
-    @staticmethod
-    def get_permutation_dicts(param_space):
-        keys, values = zip(*param_space.values())
-        return [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     def optimize_hypers_using_random_search(self, n_splits, n_iters):
         for i in range(n_iters):
@@ -99,7 +98,7 @@ class HyperparamPipeline:
     def determine_model(self, params):
         #add support for more models
         if self.model == 'xgb' and self.classification:
-            return xgb.XGBClassifier(**params)
+            return xgb.XGBClassifier(objective='binary:logistic', verbosity=0, **params)
         else:
             raise ValueError('this model is currently not supported. try any of: xgb')
 
@@ -109,14 +108,10 @@ if __name__ == '__main__':
     X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
     y = pd.DataFrame(data=y, columns=["y"])
     space = {
-        "n_estimators": [5, 10, 15],
+        "n_estimators": [5, 10],
         "eta": [0.025, 0.5, 0.025],
-        "max_depth": [4, 8, 12],
-        "min_child_weight": [2, 4, 6],
-        "subsample": [0.5, 0.6],
-        "gamma": [0.6, 0.7],
-        "objective": "binary:logistic",
-        "verbosity": 0
+        "max_depth": [4, 8, 12]
     }
     hp = HyperparamPipeline(X, y, model='xgb', param_space=space, stratify=True, cols_to_scale=X.columns, classification=True, metric='accuracy_score')
-    hp.search_for_params(searching_algo='random', n_splits=5, n_iters=10)
+    hp.search_for_params(searching_algo='random', n_splits=5, n_iters=3)
+    print(hp.get_best_params())
