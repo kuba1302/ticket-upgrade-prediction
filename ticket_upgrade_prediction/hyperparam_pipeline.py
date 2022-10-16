@@ -12,6 +12,7 @@ from sklearn.model_selection import StratifiedKFold
 import random
 from sklearn.metrics import accuracy_score
 import itertools
+import numpy as np
 
 
 class HyperparamPipeline:
@@ -28,17 +29,15 @@ class HyperparamPipeline:
         self.stratify = stratify
         self.best_params = None
 
+    def get_best_params(self):
+        return self.params[np.argmax(self.scores)], np.max(self.scores)
+
     def search_for_params(self, searching_algo: str = 'random', n_splits: int = 5, **kwargs):
-        #wez goly dataset
-        #wylosuj parametry (albo wez kolejne z grida)
-        #wylosuj probke pod kfold x-validation
-        #zrob skalowanie na kazdej probce
-        #zapisz gdzies sredni wynik z walidacji (oraz paramsy)
         #dodatkowa metoda do wyciagniecia najlepszego wyniku + hiperkow
         if searching_algo == 'random':
             self.optimize_hypers_using_random_search(n_splits, kwargs)
         elif searching_algo == 'grid':
-            pass
+            self.optimize_hypers_using_grid_search(n_splits)
         else:
             raise ValueError('Unrecognizable searching_algo param. Currently available are: random, grid, bayes.')
 
@@ -65,9 +64,9 @@ class HyperparamPipeline:
 
     def create_splits_and_calc_scores(self, n_splits, iteration_params):
         kf = StratifiedKFold(n_splits) if self.stratify else kf = KFold(n_splits)
-        self.scores.append(
+        self.scores.append(np.mean(
             [self.create_preds_for_hypers(train_index, test_index, iteration_params) for train_index, test_index in
-             kf.split(self.X, self.y)])
+             kf.split(self.X, self.y)]))
 
     def get_scaled_train_and_test_sets(self, train_index, test_index):
         scaler = StandardScaler()
