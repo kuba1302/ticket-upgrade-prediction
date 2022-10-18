@@ -61,7 +61,7 @@ class HyperparamPipeline:
             self.optimize_hypers_using_grid_search(n_splits)
         else:
             raise ValueError(
-                "Unrecognizable searching_algo param. Currently available are: random, grid, bayes."
+                "Unrecognizable searching_algo param. Currently available are: random, grid."
             )
 
     @staticmethod
@@ -73,28 +73,26 @@ class HyperparamPipeline:
 
     def optimize_hypers_using_grid_search(self, n_splits: int) -> None:
         for iteration_params in ParameterGrid(self.param_space):
-            self.params.append(iteration_params)
-            score = self.create_splits_and_calc_scores(
-                n_splits, iteration_params
-            )
-            logger.info(f"score for params {iteration_params} -> {score}")
-            self.scores.append(score)
+            self.append_params_and_calculate_scores(iteration_params, n_splits)
+
+    def append_params_and_calculate_scores(
+        self, iteration_params: dict, n_splits: int
+    ) -> None:
+        self.params.append(iteration_params)
+        score = self.create_splits_and_calc_scores(n_splits, iteration_params)
+        logger.info(f"score for params {iteration_params} -> {score}")
+        self.scores.append(score)
 
     def optimize_hypers_using_random_search(
         self, n_splits: int, n_iters: int
     ) -> None:
         for i in range(n_iters):
             iteration_params = self.get_random_params(self.param_space)
-            self.params.append(iteration_params)
-            score = self.create_splits_and_calc_scores(
-                n_splits, iteration_params
-            )
-            logger.info(f"score for params {iteration_params} -> {score}")
-            self.scores.append(score)
+            self.append_params_and_calculate_scores(iteration_params, n_splits)
 
     def create_splits_and_calc_scores(
         self, n_splits: int, iteration_params: dict
-    ) -> float:
+    ) -> np.ndarray:
         kf = StratifiedKFold(n_splits) if self.stratify else KFold(n_splits)
         return np.mean(
             [
