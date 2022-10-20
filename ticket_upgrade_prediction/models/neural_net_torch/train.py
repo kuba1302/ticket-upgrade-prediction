@@ -25,6 +25,26 @@ from ticket_upgrade_prediction.pipeline import Pipeline
 from ticket_upgrade_prediction.config.env_config import EXPERIMENT_NAME
 
 
+def mlflow_run_start_handle(method):
+    def wrapper(*args, **kwargs):
+        mlflow_run_name = kwargs["mlflow_run_name"]
+        to_mlflow = True if mlflow_run_name else False
+
+        if to_mlflow:
+            client = mlflow.MlflowClient()
+            experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
+
+            with mlflow.start_run(
+                run_name=mlflow_run_name,
+                experiment_id=experiment.experiment_id,
+            ):
+                method(*args, **kwargs)
+
+        else:
+            method(*args, **kwargs)
+    
+    return wrapper
+
 @dataclass
 class HyperParams:
     layers: list[int]
@@ -81,7 +101,10 @@ class NetworkTrainer:
         loss.backward()
         self.optimizer.step()
 
-    def _fit(self, to_mlflow: bool = False):
+    @mlflow_run_start_handle
+    def fit(self, mlflow_run_name: int = None):
+        to_mlflow = True if mlflow_run_name else False
+        
         train_dataset = UpgradeDataset(
             X=self.dataset.X_train, y=self.dataset.y_train.values
         )
@@ -95,30 +118,12 @@ class NetworkTrainer:
             with torch.no_grad():
                 self._evaluate(to_mlflow=to_mlflow, epoch=epoch)
 
-    def fit(
-        self,
-        mlflow_run_name: str = None,
-    ) -> None:
-        to_mlflow = True if mlflow_run_name else False
-
-        if to_mlflow:
-            client = mlflow.MlflowClient()
-            experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
-
-            with mlflow.start_run(
-                run_name=mlflow_run_name,
-                experiment_id=experiment.experiment_id,
-            ):
-                self._fit(to_mlflow=to_mlflow)
-
-        else:
-            self._fit(to_mlflow=to_mlflow)
-
     def _evaluate(self, to_mlflow: bool, epoch: int) -> None:
         evaluator = Evaluator(
             model=self.model, X=self.dataset.X_test, y=self.dataset.y_test
         )
         metrics = evaluator.get_all_metrics(epoch=epoch, to_mlflow=to_mlflow)
+        _ = evaluator.plot_all_plots()
         logger.info(metrics)
         self.training_results.append(metrics)
 
@@ -187,11 +192,12 @@ class NeuralNetHyperopt:
             metrics_list.append(last_metrics)
 
         if to_mlflow:
-            m
+            pass
         return Metrics.from_multiple_metrics(*metrics_list)
 
     def _one_fold_train(self):
         pass
+
 
     def _hyperopt(
         self,
