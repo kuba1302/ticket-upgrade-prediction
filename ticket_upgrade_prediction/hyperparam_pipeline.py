@@ -2,14 +2,19 @@ import random
 import warnings
 
 import numpy as np
+import lightbgm as lgb
 import pandas as pd
 import xgboost as xgb
+import catboost as ctb
 from loguru import logger
 from pandas.core.common import SettingWithCopyWarning
 from sklearn.datasets import make_classification
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, ParameterGrid, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsRegressor
 
 from ticket_upgrade_prediction.pipeline import Pipeline as df_pipeline
 
@@ -147,13 +152,39 @@ class HyperparamPipeline:
 
     def determine_model(self, params: dict):
         # add support for more models
-        if self.model == "xgb" and self.classification:
-            return xgb.XGBClassifier(
-                objective="binary:logistic", verbosity=0, **params
+        if self.model == "xgb":
+            if self.classification:
+                return xgb.XGBClassifier(
+                    objective="binary:logistic", verbosity=0, **params
+                )
+            return xgb.XGBRegressor(
+                objective="reg:squarederror", verbosity=0, **params
             )
+        elif self.model == "lr":
+            return LogisticRegression(
+                **params
+            )
+        elif self.model == 'knn':
+            if self.classification:
+                return KNeighborsClassifier(
+                    **params
+                )
+            return KNeighborsRegressor(
+                **params
+            )
+        elif self.model == 'cat':
+            if self.classification:
+                return ctb.CatBoostClassifier(
+                    **params
+                )
+            return ctb.CatBoostRegressor(**params)
+        elif self.model == 'lgb':
+            if self.classification:
+                return lgb.LGBMClassifier(**params)
+            return lgb.LGBMRegressor(**params)
         else:
             raise ValueError(
-                "this model is currently not supported. try any of: xgb"
+                "this model is currently not supported. try any of: xgb, lr, knn, cat, lgb"
             )
 
 
