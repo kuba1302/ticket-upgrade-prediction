@@ -1,20 +1,28 @@
 import random
 import warnings
 
-import numpy as np
+import catboost as ctb
 import lightbgm as lgb
+import numpy as np
 import pandas as pd
 import xgboost as xgb
-import catboost as ctb
 from loguru import logger
 from pandas.core.common import SettingWithCopyWarning
 from sklearn.datasets import make_classification
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import KFold, ParameterGrid, StratifiedKFold
-from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy,
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    mean_squared_error,
+    precision_score,
+    recall,
+    roc_auc_score,
+)
+from sklearn.model_selection import KFold, ParameterGrid, StratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
 
 from ticket_upgrade_prediction.pipeline import Pipeline as df_pipeline
 
@@ -145,13 +153,28 @@ class HyperparamPipeline:
         # add support for more metrics
         if self.metric == "accuracy_score":
             return accuracy_score(y_pred, y_true)
+        elif self.metric == "balanced_accuracy":
+            return balanced_accuracy(y_pred, y_true)
+        elif self.metric == "precision":
+            return precision_score(y_pred, y_true)
+        elif self.metric == "recall":
+            return recall(y_pred, y_true)
+        elif self.metric == "roc_auc":
+            return roc_auc_score(y_pred, y_true)
+        elif self.metric == "mse":
+            return mean_squared_error(y_pred, y_true)
+        elif self.metric == "rmse":
+            return np.sqrt(mean_squared_error(y_pred, y_true))
+        elif self.metric == "mae":
+            return mean_absolute_error(y_pred, y_true)
+        elif self.metric == "mape":
+            return mean_absolute_percentage_error(y_pred, y_true)
         else:
             raise ValueError(
-                "this model is currently not supported. try any of: xgb"
+                "this model is currently not supported. try any of: accuracy_score, balanced_accuracy, precision, recall, roc_auc, mse, rmse, mae, mape"
             )
 
     def determine_model(self, params: dict):
-        # add support for more models
         if self.model == "xgb":
             if self.classification:
                 return xgb.XGBClassifier(
@@ -161,24 +184,16 @@ class HyperparamPipeline:
                 objective="reg:squarederror", verbosity=0, **params
             )
         elif self.model == "lr":
-            return LogisticRegression(
-                **params
-            )
-        elif self.model == 'knn':
+            return LogisticRegression(**params)
+        elif self.model == "knn":
             if self.classification:
-                return KNeighborsClassifier(
-                    **params
-                )
-            return KNeighborsRegressor(
-                **params
-            )
-        elif self.model == 'cat':
+                return KNeighborsClassifier(**params)
+            return KNeighborsRegressor(**params)
+        elif self.model == "cat":
             if self.classification:
-                return ctb.CatBoostClassifier(
-                    **params
-                )
+                return ctb.CatBoostClassifier(**params)
             return ctb.CatBoostRegressor(**params)
-        elif self.model == 'lgb':
+        elif self.model == "lgb":
             if self.classification:
                 return lgb.LGBMClassifier(**params)
             return lgb.LGBMRegressor(**params)
