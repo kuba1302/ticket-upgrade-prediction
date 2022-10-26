@@ -47,6 +47,24 @@ class Metrics:
         metrics_df = pd.DataFrame(metrics_list).mean()
         return cls(**metrics_df.to_dict())
 
+    def get_metric_from_string(self, metric_name: str) -> float:
+        metric_mapping = {
+            "accuracy": self.accuracy,
+            "roc_auc": self.roc_auc,
+            "precision": self.precision,
+            "recall": self.recall,
+            "f1": self.f1,
+            "pr_auc": self.pr_auc,
+            "epoch": self.epoch,
+        }
+
+        if metric_name not in metric_mapping.keys():
+            raise ValueError(
+                f"Wrong metric name provided! Accepted names: {list(metric_mapping.keys())}"
+            )
+
+        return metric_mapping[metric_name]
+
 
 class BaseEvaluator(ABC):
     """Interface for Evaluator"""
@@ -246,7 +264,8 @@ class Evaluator(BaseEvaluator):
     def plot_all_plots(
         self, save_path: Path = None, to_mlflow: bool = False
     ) -> None:
-        os.makedirs(save_path, exist_ok=True)
+        if save_path:
+            os.makedirs(save_path, exist_ok=True)
 
         self.plot_partial_dependency_plot(save_path=save_path)
         self.plot_precision_recall_curve(save_path=save_path)

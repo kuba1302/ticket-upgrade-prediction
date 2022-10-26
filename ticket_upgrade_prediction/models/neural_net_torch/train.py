@@ -1,7 +1,7 @@
 from copyreg import pickle
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import click
 import pandas as pd
@@ -42,8 +42,9 @@ def mlflow_run_start_handle(method):
 
         else:
             method(*args, **kwargs)
-    
+
     return wrapper
+
 
 @dataclass
 class HyperParams:
@@ -51,25 +52,32 @@ class HyperParams:
     optimizer_name: str
     learning_rate: float
 
+    def to_dict(self) -> dict:
+        return self.__dict__
+
 
 class NetworkTrainer:
     def __init__(
         self,
         dataset: Dataset,
-        layers: list = [5],
-        optimizer_name: str = "Adam",
+        hparams: HyperParams = HyperParams(
+            layers=[5], optimizer_name="Adam", learning_rate=0.0001
+        ),
         epochs: int = 2,
-        learning_rate: float = 0.0001,
         batch_size: int = 64,
         criterion: Any = BCEWithLogitsLoss(),
+        plots_save_path: Optional[Path] = None,
     ) -> None:
-        self.layers = layers
         self.dataset = dataset
+        self.hparams = hparams
+        self.plot_save_path = plots_save_path
         self.model = Network(
-            input_size=dataset.X_train.shape[1], hidden_layers_sizes=layers
+            input_size=dataset.X_train.shape[1],
+            hidden_layers_sizes=self.hparams.layers,
         )
         self.optimizer = self._get_optimizer(
-            optimizer_name=optimizer_name, learning_rate=learning_rate
+            optimizer_name=self.hparams.optimizer_name,
+            learning_rate=self.hparams.learning_rate,
         )
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -80,9 +88,7 @@ class NetworkTrainer:
 
         self.training_results = []
 
-    def _get_optimizer(
-        self, optimizer_name: str, learning_rate: float
-    ) -> None:
+    def _get_optimizer(self, optimizer_name: str, learning_rate: float) -> Any:
         if optimizer_name.lower() == "adam":
             return Adam(self.model.parameters(), lr=learning_rate)
         elif optimizer_name.lower() == "sgd":
@@ -104,13 +110,17 @@ class NetworkTrainer:
     @mlflow_run_start_handle
     def fit(self, mlflow_run_name: int = None):
         to_mlflow = True if mlflow_run_name else False
-        
+
         train_dataset = UpgradeDataset(
             X=self.dataset.X_train, y=self.dataset.y_train.values
         )
         train_loader = DataLoader(
             dataset=train_dataset, batch_size=self.batch_size, shuffle=True
         )
+
+        if to_mlflow:
+            mlflow.log_params(self.hparams.to_dict())
+
         for epoch in tqdm(range(self.epochs), desc="Epoch"):
             for X, y in tqdm(iter(train_loader), desc="Batch"):
                 self._one_batch(X=X, y=y)
@@ -123,7 +133,9 @@ class NetworkTrainer:
             model=self.model, X=self.dataset.X_test, y=self.dataset.y_test
         )
         metrics = evaluator.get_all_metrics(epoch=epoch, to_mlflow=to_mlflow)
-        _ = evaluator.plot_all_plots()
+        _ = evaluator.plot_all_plots(
+            save_path=self.plot_save_path, to_mlflow=to_mlflow
+        )
         logger.info(metrics)
         self.training_results.append(metrics)
 
@@ -159,7 +171,7 @@ class NeuralNetHyperopt:
         keys, values = zip(*hyper_params.items())
         return [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    def _one_hparam_combination(self, hparams, to_mlflow: bool):
+    def _one_hparam_combination(self, hparams: dict, to_mlflow: bool):
         s_kfold = StratifiedKFold(n_splits=self.n_splits)
         metrics_list = []
 
@@ -179,59 +191,42 @@ class NeuralNetHyperopt:
             )
             trainer = NetworkTrainer(
                 dataset=dataset,
-                layers=hyper_params.layers,
-                optimizer_name=hyper_params.optimizer_name,
+                hparams=hyper_params,
                 epochs=self.per_fold_epoch,
-                learning_rate=hyper_params.learning_rate,
                 batch_size=self.batch_size,
             )
+            # Don't save every fold to mlflow, do it manually later!
+            trainer.fit(mlflow_run_name=None)
 
-            trainer.fit()
             # In future - change last merics to best metrics?
             last_metrics = trainer.get_results()[-1]
             metrics_list.append(last_metrics)
 
+        metrics = Metrics.from_multiple_metrics(*metrics_list)
+
         if to_mlflow:
-            pass
-        return Metrics.from_multiple_metrics(*metrics_list)
+            mlflow.log_params(hyper_params.to_dict())
+            mlflow.log_metrics(metrics)
 
-    def _one_fold_train(self):
-        pass
+        return metrics
 
-
-    def _hyperopt(
-        self,
-        target_metric: str,
-        params: dict,
-        number_of_hparams_combinations: int,
-        to_mlflow: bool = False,
-    ):
-        param_combinations: list[dict] = self._get_params_combinations()
-
-        for param_combination in param_combinations[
-            :number_of_hparams_combinations
-        ]:
-            result = self._one_hparam_combination()
-            self.metrics.append(result)
-
+    @mlflow_run_start_handle
     def hyperopt(
         self,
-        mlflow_run_name: str = None,
-    ) -> None:
+        target_metric: str,
+        number_of_hparams_combinations: int,
+        mlflow_run_name: bool = False,
+    ):
         to_mlflow = True if mlflow_run_name else False
 
-        if to_mlflow:
-            client = mlflow.MlflowClient()
-            experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
+        for param_combination in self.hyper_params_combinations[
+            :number_of_hparams_combinations
+        ]:
+            result = self._one_hparam_combination(
+                hparams=param_combination, to_mlflow=to_mlflow
+            ).get_metric_from_string(metric_name=target_metric)
 
-            with mlflow.start_run(
-                run_name=mlflow_run_name,
-                experiment_id=experiment.experiment_id,
-            ):
-                self._hyperopt(to_mlflow=to_mlflow)
-
-        else:
-            self._hyperopt(to_mlflow=to_mlflow)
+            self.metrics.append(result)
 
     def get_metrics(self):
         return self.metrics
@@ -241,20 +236,7 @@ class NeuralNetHyperopt:
 
 
 """
-1. Podajemy df
-2. Wybieramy losowe kombinacje parametrow
-3. Dla kazdej kombinacji: 
-    - Dzielimy na foldy.
-    - Dla kazdego folda: 
-        - trening modelu
-        - ewaluacja
-        - zapisanie metryk
-    - srednia z metryk 
-    - zapis w mlflow 
-    - trzymamy w pamieci jakie parametry juz poszy (na wypadek jakby sie wypierdolilo)
-
-
-
+1. Checkpointy - zapis wszystkich kombinacji i tych jakie juz poszly
 """
 
 
