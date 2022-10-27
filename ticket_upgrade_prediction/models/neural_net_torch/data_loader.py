@@ -1,4 +1,5 @@
 from pathlib import Path
+from numpy.typing import ArrayLike
 
 import numpy as np
 import pandas as pd
@@ -11,11 +12,11 @@ class UpgradeDataset(Dataset):
     def __init__(
         self,
         X: pd.DataFrame,
-        y: np.ndarray,
-        scaler_class: TransformerMixin = StandardScaler,
+        y: ArrayLike,
+        scaler_class: type[TransformerMixin] = StandardScaler,
     ) -> None:
         self.X = X.values
-        self.y = y.reshape(-1, 1)
+        self.y = np.array(y).reshape(-1, 1)
         self.scaler_class = scaler_class
 
         self.X_scaler = None
@@ -54,7 +55,7 @@ class UpgradeDataset(Dataset):
         X = data.drop(columns=y_col)
         y = data[y_col].values
 
-        return cls(X=X, y=y)
+        return cls(X=X, y=y)  # type: ignore
 
 
 if __name__ == "__main__":

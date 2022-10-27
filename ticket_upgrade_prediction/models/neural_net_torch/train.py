@@ -108,7 +108,7 @@ class NetworkTrainer:
         self.optimizer.step()
 
     @mlflow_run_start_handle
-    def fit(self, mlflow_run_name: int = None):
+    def fit(self, mlflow_run_name: Optional[int] = None) -> None:
         to_mlflow = True if mlflow_run_name else False
 
         train_dataset = UpgradeDataset(
