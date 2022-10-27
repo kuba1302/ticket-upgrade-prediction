@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import torch
 from matplotlib.figure import Figure
-from sklearn.datasets import make_classification
 from sklearn.base import ClassifierMixin
+from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import (
