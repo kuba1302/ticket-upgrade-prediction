@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from matplotlib.figure import Figure
 from sklearn.datasets import make_classification
+from sklearn.base import ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import (
@@ -48,6 +49,12 @@ class Metrics:
         return cls(**metrics_df.to_dict())
 
     def get_metric_from_string(self, metric_name: str) -> float:
+        """
+        Select one metric from string.
+        Possible metric_name values:
+        accuracy, roc_auc, precision
+        recall, f1, pr_auc, epoch
+        """
         metric_mapping = {
             "accuracy": self.accuracy,
             "roc_auc": self.roc_auc,
@@ -79,7 +86,12 @@ class BaseEvaluator(ABC):
 
 
 class Evaluator(BaseEvaluator):
-    def __init__(self, model: BaseModel, X: pd.DataFrame, y: np.ndarray) -> None:
+    def __init__(
+        self,
+        model: BaseModel | ClassifierMixin,
+        X: pd.DataFrame,
+        y: np.ndarray,
+    ) -> None:
         self.model = model
         self._assert_model_has_proper_methods()
 
@@ -126,10 +138,8 @@ class Evaluator(BaseEvaluator):
         if isinstance(proba, torch.Tensor):
             return proba.numpy().reshape(-1)
 
-        if proba.shape[1] == 1:
+        else:
             return proba[:, 1]
-
-        return proba
 
     def get_accuracy(self) -> float:
         return accuracy_score(y_true=self.y, y_pred=self.preds)
@@ -278,31 +288,20 @@ class Evaluator(BaseEvaluator):
 
 
 if __name__ == "__main__":
-    # Just for testing purposes, to be removed later
-    # save_path = Path(__file__).parents[1] / "plots"
-    # X, y = make_classification(n_samples=10000, weights=[0.5])
-    # X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
-    # y = pd.DataFrame(data=y, columns=["y"])
+    # Usage tutorial
+    save_path = Path(__file__).parents[1] / "plots"
+    X, y = make_classification(n_samples=10000, weights=[0.5], n_classes=2)
+    X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
+    y = pd.DataFrame(data=y, columns=["y"])
 
-    # X_train, X_test, y_train, y_test = train_test_split(
-    #     X, y, test_size=0.33, random_state=42
-    # )
-    # model = RandomForestClassifier()
-    # model.fit(X_train, y_train)
-    # evaluator = Evaluator(model=model, X=X_test, y=y_test)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=42
+    )
+    model = RandomForestClassifier()
+    model.fit(X=X_train, y=y_train)
+    evaluator = Evaluator(model=model, X=X_test, y=y_test)
+    metric = evaluator.get_all_metrics()
+    print(metric.get_metric_from_string("roc_auc"))
     # evaluator.plot_precision_recall_curve(save_path=save_path)
     # evaluator.plot_roc_curve(save_path=save_path)
     # evaluator.plot_partial_dependency_plot(save_path=save_path)
-
-    # print(evaluator.get_all_metrics())
-    # mlflow.set_tracking_uri("http://localhost:5000")
-    # with mlflow.start_run():
-    #     model = RandomForestClassifier()
-    #     model.fit(X_train, y_train)
-    #     evaluator = Evaluator(model=model, X=X_test, y=y_test)
-    #     evaluator.get_all_metrics(to_mlflow=True)
-    #     mlflow.sklearn.log_model(
-    #         sk_model=model,
-    #         artifact_path="sklearn-model",
-    #         registered_model_name="rf_random_data",
-    #     )
