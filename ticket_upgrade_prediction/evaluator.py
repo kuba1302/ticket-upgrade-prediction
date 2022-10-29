@@ -11,6 +11,7 @@ import torch
 from matplotlib.figure import Figure
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.base import SklearnClassifier
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import (
     accuracy_score,
@@ -79,7 +80,12 @@ class BaseEvaluator(ABC):
 
 
 class Evaluator(BaseEvaluator):
-    def __init__(self, model: BaseModel, X: pd.DataFrame, y: np.ndarray) -> None:
+    def __init__(
+        self,
+        model: BaseModel | SklearnClassifier,
+        X: pd.DataFrame,
+        y: np.ndarray,
+    ) -> None:
         self.model = model
         self._assert_model_has_proper_methods()
 
@@ -126,18 +132,16 @@ class Evaluator(BaseEvaluator):
         if isinstance(proba, torch.Tensor):
             return proba.numpy().reshape(-1)
 
-        if proba.shape[1] == 1:
+        else:
             return proba[:, 1]
 
-        return proba
-
     def get_accuracy(self) -> float:
-        return accuracy_score(y_true=self.y, y_pred=self.preds)
+        return accuracy_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_roc_auc(self) -> float:
-        return roc_auc_score(y_true=self.y, y_score=self.proba)
+        return roc_auc_score(y_true=self.y, y_score=self.proba)  # type: ignore
 
-    def _get_pr_curve_properties(self) -> float:
+    def _get_pr_curve_properties(self) -> tuple:
         precision, recall, thresholds = precision_recall_curve(
             self.y, self.proba
         )
@@ -145,20 +149,20 @@ class Evaluator(BaseEvaluator):
         return precision, recall, thresholds
 
     def get_precision(self) -> float:
-        return precision_score(y_true=self.y, y_pred=self.preds)
+        return precision_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_recall(self) -> float:
-        return recall_score(y_true=self.y, y_pred=self.preds)
+        return recall_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_f1_score(self) -> float:
-        return f1_score(y_true=self.y, y_pred=self.preds)
+        return f1_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_pr_auc(self) -> float:
         precision, recall, _ = self._get_pr_curve_properties()
         return auc(recall, precision)
 
     def get_all_metrics(
-        self, to_mlflow: bool = False, epoch: int = None
+        self, to_mlflow: bool = False, epoch: int | None = None
     ) -> Metrics:
         metrics = Metrics(
             accuracy=self.get_accuracy(),
@@ -175,7 +179,7 @@ class Evaluator(BaseEvaluator):
 
         return metrics
 
-    def plot_roc_curve(self, save_path: Optional[Path] = None) -> Figure:
+    def plot_roc_curve(self, save_path: Path | None = None) -> Figure:
         fpr, tpr, thresholds = roc_curve(y_true=self.y, y_score=self.proba)
         auc_score = auc(fpr, tpr)
 
@@ -190,7 +194,7 @@ class Evaluator(BaseEvaluator):
         ax.scatter(
             fpr[ix],
             tpr[ix],
-            marker="o",
+            marker="o",  # type: ignore
             color="black",
             label=f"Best Threshold={thresholds[ix]:.2f}, G-Mean={gmeans[ix]:.2f}",
         )
@@ -230,7 +234,7 @@ class Evaluator(BaseEvaluator):
         ax.scatter(
             recall[ix],
             precision[ix],
-            marker="o",
+            marker="o",  # type: ignore
             color="black",
             label=f"Best Threshold={thresholds[ix]:.2f}, F-Score={fscore[ix]:.2f}",
         )
@@ -279,20 +283,20 @@ class Evaluator(BaseEvaluator):
 
 if __name__ == "__main__":
     # Just for testing purposes, to be removed later
-    # save_path = Path(__file__).parents[1] / "plots"
-    # X, y = make_classification(n_samples=10000, weights=[0.5])
-    # X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
-    # y = pd.DataFrame(data=y, columns=["y"])
+    save_path = Path(__file__).parents[1] / "plots"
+    X, y = make_classification(n_samples=10000, weights=[0.5])
+    X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
+    y = pd.DataFrame(data=y, columns=["y"])
 
-    # X_train, X_test, y_train, y_test = train_test_split(
-    #     X, y, test_size=0.33, random_state=42
-    # )
-    # model = RandomForestClassifier()
-    # model.fit(X_train, y_train)
-    # evaluator = Evaluator(model=model, X=X_test, y=y_test)
-    # evaluator.plot_precision_recall_curve(save_path=save_path)
-    # evaluator.plot_roc_curve(save_path=save_path)
-    # evaluator.plot_partial_dependency_plot(save_path=save_path)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=42
+    )
+    model = RandomForestClassifier()
+    model.fit(X_train, y_train)
+    evaluator = Evaluator(model=model, X=X_test, y=y_test)
+    evaluator.plot_precision_recall_curve(save_path=save_path)
+    evaluator.plot_roc_curve(save_path=save_path)
+    evaluator.plot_partial_dependency_plot(save_path=save_path)
 
     # print(evaluator.get_all_metrics())
     # mlflow.set_tracking_uri("http://localhost:5000")
