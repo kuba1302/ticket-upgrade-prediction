@@ -27,7 +27,7 @@ from ticket_upgrade_prediction.config.env_config import EXPERIMENT_NAME
 
 def mlflow_run_start_handle(method):
     def wrapper(*args, **kwargs):
-        mlflow_run_name = kwargs["mlflow_run_name"]
+        mlflow_run_name = kwargs.get("mlflow_run_name", None)
         to_mlflow = True if mlflow_run_name else False
 
         if to_mlflow:
@@ -133,9 +133,9 @@ class NetworkTrainer:
             model=self.model, X=self.dataset.X_test, y=self.dataset.y_test
         )
         metrics = evaluator.get_all_metrics(epoch=epoch, to_mlflow=to_mlflow)
-        _ = evaluator.plot_all_plots(
-            save_path=self.plot_save_path, to_mlflow=to_mlflow
-        )
+        # _ = evaluator.plot_all_plots(
+        #     save_path=self.plot_save_path, to_mlflow=to_mlflow
+        # )
         logger.info(metrics)
         self.training_results.append(metrics)
 
@@ -176,7 +176,7 @@ class NeuralNetHyperopt:
         metrics_list = []
 
         for train_index, test_index in s_kfold.split(
-            self.data.drop(columns=self.y_col), self.data[:, self.y_col]
+            X=self.data.drop(columns=self.y_col), y=self.data[self.y_col]
         ):
             dataset = Dataset(
                 X_train=self.data.loc[train_index, :].drop(columns=self.y_col),
@@ -346,8 +346,24 @@ if __name__ == "__main__":
     with open(data_path, "rb") as file:
         dataset = pickle.load(file)
 
-    dataset = dataset.get_sample(10000)
-    print(dataset.get_shapes())
+    # trainer = NetworkTrainer(dataset=dataset, epochs=20)
+    # trainer.fit(mlflow_run_name="Neural-net-test")
 
-    trainer = NetworkTrainer(dataset=dataset, epochs=20)
-    trainer.fit(mlflow_run_name="Neural-net-test")
+    data_path_csv = Path(__file__).parents[3] / "data" / "dataset.csv"
+    df = (
+        pd.read_csv(data_path_csv, index_col=False)
+        .sample(10000)
+        .reset_index(drop=True)
+    )
+    params = {
+        "layers": [[5], [5, 10], [5, 10, 15]],
+        "optimizer_name": ["adam"],
+        "learning_rate": [0.001, 0.01, 0.0001],
+    }
+
+    hyperopt = NeuralNetHyperopt(data=df, hyper_params=params)
+    hyperopt.hyperopt(
+        target_metric="roc_auc", number_of_hparams_combinations=3
+    )
+
+    print(hyperopt.get_metrics())

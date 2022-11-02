@@ -11,7 +11,6 @@ import torch
 from matplotlib.figure import Figure
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.base import SklearnClassifier
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import (
     accuracy_score,
@@ -82,7 +81,7 @@ class BaseEvaluator(ABC):
 class Evaluator(BaseEvaluator):
     def __init__(
         self,
-        model: BaseModel | SklearnClassifier,
+        model: BaseModel,
         X: pd.DataFrame,
         y: np.ndarray,
     ) -> None:
