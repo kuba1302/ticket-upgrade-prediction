@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -88,7 +88,7 @@ class BaseEvaluator(ABC):
 class Evaluator(BaseEvaluator):
     def __init__(
         self,
-        model: BaseModel | ClassifierMixin,
+        model: Union[BaseModel, ClassifierMixin],
         X: pd.DataFrame,
         y: np.ndarray,
     ) -> None:
@@ -147,7 +147,7 @@ class Evaluator(BaseEvaluator):
     def get_roc_auc(self) -> float:
         return roc_auc_score(y_true=self.y, y_score=self.proba)
 
-    def _get_pr_curve_properties(self) -> float:
+    def _get_pr_curve_properties(self) -> tuple:
         precision, recall, thresholds = precision_recall_curve(
             self.y, self.proba
         )
