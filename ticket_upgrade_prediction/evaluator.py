@@ -2,9 +2,10 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import pandas as pd
 import torch
@@ -25,7 +26,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-import mlflow
 from ticket_upgrade_prediction.models import BaseModel
 
 
