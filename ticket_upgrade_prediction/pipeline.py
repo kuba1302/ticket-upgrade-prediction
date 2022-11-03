@@ -1,15 +1,15 @@
+import pickle
+import random
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 from loguru import logger
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from typing import Tuple
-import pickle
-import random
 
 
 @dataclass

@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Union
-import numpy as np
 
-from xgboost import XGBClassifier, XGBRegressor
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from xgboost import XGBClassifier, XGBRegressor
 
 # !TODO add lightgbm
 SklearnClassifier = Union[

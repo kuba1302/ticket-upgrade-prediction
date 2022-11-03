@@ -1,8 +1,8 @@
 from pathlib import Path
-from numpy.typing import ArrayLike
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from sklearn.base import TransformerMixin
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
