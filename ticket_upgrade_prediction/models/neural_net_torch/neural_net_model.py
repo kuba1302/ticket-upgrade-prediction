@@ -13,7 +13,7 @@ class LinearReluModule(nn.Module):
             nn.Linear(input_size, output_size), nn.ReLU()
         )
 
-    def formward(self, x):
+    def forward(self, x):
         return self.block(x)
 
 
@@ -28,7 +28,6 @@ class Network(nn.Module, BaseModel):
             self._get_hidden_layers(),
             nn.Linear(self.hidden_layers_sizes[-1], 1),
         )
-        print(self.layers)
 
     def _get_hidden_layers(self):
         modules = []
