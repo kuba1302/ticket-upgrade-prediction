@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-import click
 import pandas as pd
 import torch
 from data_loader import UpgradeDataset
@@ -20,7 +19,7 @@ from tqdm import tqdm
 import mlflow
 from ticket_upgrade_prediction import Evaluator, Metrics
 from ticket_upgrade_prediction.config.env_config import EXPERIMENT_NAME
-from ticket_upgrade_prediction.pipeline import Dataset, Pipeline
+from ticket_upgrade_prediction.pipeline import Dataset
 
 
 def mlflow_run_start_handle(method):
@@ -106,7 +105,7 @@ class NetworkTrainer:
         self.optimizer.step()
 
     @mlflow_run_start_handle
-    def fit(self, mlflow_run_name: Optional[int] = None) -> None:
+    def fit(self, mlflow_run_name: Optional[str] = None) -> None:
         to_mlflow = True if mlflow_run_name else False
 
         train_dataset = UpgradeDataset(
