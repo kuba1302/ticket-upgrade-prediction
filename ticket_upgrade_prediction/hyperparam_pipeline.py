@@ -38,7 +38,7 @@ class HyperparamPipeline:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        model: str,
+        model_type: str,
         param_space: dict,
         stratify: bool,
         cols_to_scale: list,
@@ -46,7 +46,7 @@ class HyperparamPipeline:
         metric: str,
     ):
         self.X, self.y = X, y
-        self.model = model
+        self.model = model_type
         self.classification = classification
         self.cols_to_scale = cols_to_scale
         self.metric = metric
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     hp = HyperparamPipeline(
         X,
         y,
-        model="xgb",
+        model_type="xgb",
         param_space=space,
         stratify=True,
         cols_to_scale=list(X.columns),
