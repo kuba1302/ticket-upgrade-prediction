@@ -2,7 +2,7 @@ import random
 import warnings
 
 import catboost as ctb
-import lightbgm as lgb
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -10,28 +10,12 @@ from loguru import logger
 from pandas.core.common import SettingWithCopyWarning
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy,
-    mean_absolute_error,
-    mean_absolute_percentage_error,
-    mean_squared_error,
-    precision_score,
-    recall,
-    roc_auc_score,
-)
 from sklearn.model_selection import KFold, ParameterGrid, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
 
-from ticket_upgrade_prediction.pipeline import Pipeline as df_pipeline
-
 warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
-from sklearn.exceptions import DataConversionWarning
 
-warnings.filterwarnings(action="ignore", category=DataConversionWarning)
-warnings.simplefilter(action="ignore", category=FutureWarning)
-warnings.simplefilter("ignore", UserWarning)
 from typing import Tuple
 
 
@@ -116,6 +100,9 @@ class HyperparamPipeline:
             ]
         )
 
+    def map_cols_to_scale_to_boolean(self):
+        return [col in self.cols_to_scale for col in list(X.columns)]
+
     def get_scaled_train_and_test_sets(
         self, train_index: np.ndarray, test_index: np.ndarray
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -126,11 +113,11 @@ class HyperparamPipeline:
             self.y.iloc[train_index],
             self.y.iloc[test_index],
         )
-        X_train[self.cols_to_scale] = scaler.fit_transform(
-            X_train[self.cols_to_scale]
+        X_train.iloc[:, self.map_cols_to_scale_to_boolean()] = scaler.fit_transform(
+            X_train.iloc[:, self.map_cols_to_scale_to_boolean()]
         )
-        X_test[self.cols_to_scale] = scaler.transform(
-            X_test[self.cols_to_scale]
+        X_test.iloc[:, self.map_cols_to_scale_to_boolean()] = scaler.transform(
+            X_test.iloc[:, self.map_cols_to_scale_to_boolean()]
         )
         return X_train, X_test, y_train, y_test
 
@@ -144,35 +131,14 @@ class HyperparamPipeline:
         X_train, X_test, y_train, y_test = self.get_scaled_train_and_test_sets(
             train_index, test_index
         )
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train.values.ravel())
         # predictions = model.predict_proba(X_test)[:, 1] if self.classification else model.predict(X_test)
         predictions = model.predict(X_test)
         return self.calculate_metric(predictions, y_test)
 
     def calculate_metric(self, y_pred: pd.Series, y_true: pd.Series) -> float:
         # add support for more metrics
-        if self.metric == "accuracy_score":
-            return accuracy_score(y_pred, y_true)
-        elif self.metric == "balanced_accuracy":
-            return balanced_accuracy(y_pred, y_true)
-        elif self.metric == "precision":
-            return precision_score(y_pred, y_true)
-        elif self.metric == "recall":
-            return recall(y_pred, y_true)
-        elif self.metric == "roc_auc":
-            return roc_auc_score(y_pred, y_true)
-        elif self.metric == "mse":
-            return mean_squared_error(y_pred, y_true)
-        elif self.metric == "rmse":
-            return np.sqrt(mean_squared_error(y_pred, y_true))
-        elif self.metric == "mae":
-            return mean_absolute_error(y_pred, y_true)
-        elif self.metric == "mape":
-            return mean_absolute_percentage_error(y_pred, y_true)
-        else:
-            raise ValueError(
-                "this model is currently not supported. try any of: accuracy_score, balanced_accuracy, precision, recall, roc_auc, mse, rmse, mae, mape"
-            )
+        return 1
 
     def determine_model(self, params: dict):
         if self.model == "xgb":
@@ -218,7 +184,7 @@ if __name__ == "__main__":
         model="xgb",
         param_space=space,
         stratify=True,
-        cols_to_scale=X.columns,
+        cols_to_scale=list(X.columns),
         classification=True,
         metric="accuracy_score",
     )
