@@ -106,7 +106,7 @@ class NetworkTrainer:
 
     @mlflow_run_start_handle
     def fit(self, mlflow_run_name: Optional[str] = None) -> None:
-        to_mlflow = True if mlflow_run_name else False
+        to_mlflow = bool(mlflow_run_name)
 
         train_dataset = UpgradeDataset(
             X=self.dataset.X_train, y=self.dataset.y_train.values
@@ -212,9 +212,9 @@ class NeuralNetHyperopt:
         self,
         target_metric: str,
         number_of_hparams_combinations: int,
-        mlflow_run_name: bool = False,
+        mlflow_run_name: Optional[str] = None,
     ):
-        to_mlflow = True if mlflow_run_name else False
+        to_mlflow = bool(mlflow_run_name)
 
         for param_combination in self.hyper_params_combinations[
             :number_of_hparams_combinations
