@@ -1,10 +1,10 @@
 import pickle
 
+import mlflow
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 
-import mlflow
 from ticket_upgrade_prediction.evaluator import Evaluator
 from ticket_upgrade_prediction.models.base import BaseModel
 from ticket_upgrade_prediction.pipeline import Pipeline
