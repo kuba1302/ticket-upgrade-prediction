@@ -1,6 +1,9 @@
+import pickle
+import random
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -15,6 +18,28 @@ class Dataset:
     X_test: pd.DataFrame
     y_train: pd.Series
     y_test: pd.Series
+
+    def get_sample(
+        self, sample_size_train: int = 10000, sample_size_test: int = 2000
+    ):
+        idxs_train = random.sample(
+            self.X_train.index.tolist(), sample_size_train
+        )
+        idxs_test = random.sample(self.X_test.index.tolist(), sample_size_test)
+        return Dataset(
+            X_train=self.X_train.loc[idxs_train, :],
+            X_test=self.X_test.loc[idxs_test, :],
+            y_train=self.y_train.loc[idxs_train],
+            y_test=self.y_test.loc[idxs_test],
+        )
+
+    def get_shapes(self):
+        return {
+            "X_train": self.X_train.shape,
+            "X_test": self.X_test.shape,
+            "y_train": self.y_train.shape,
+            "y_test": self.y_test.shape,
+        }
 
 
 class Pipeline:
@@ -38,7 +63,9 @@ class Pipeline:
             self.data_path / f"{file_prefix}_train.csv", sep=";"
         )
 
-    def read_all_files(self) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_all_files(
+        self,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         bkg = self.read_csv_file("BKG").drop(columns=self.get_bkg_drop_cols())
         logger.info("loaded booking data")
         tkt = self.read_csv_file("TKT")
@@ -340,7 +367,7 @@ class Pipeline:
             columns=self.get_oh_cols()
         )
 
-    def scale_final_dataset(self) -> Dataset:
+    def scale_final_dataset(self, save_path: Path = None) -> Dataset:
         self.concat_df_with_oh_encoding()
         X_train, X_test, y_train, y_test = train_test_split(
             self.df.drop(columns=self.target),
@@ -358,12 +385,19 @@ class Pipeline:
             X_test[self.get_cols_to_scale()]
         )
         logger.info("scaled features")
-        return Dataset(
+
+        dataset = Dataset(
             X_train=X_train,
             X_test=X_test,
             y_train=y_train,
             y_test=y_test,
         )
+
+        if save_path:
+            with open(save_path, "wb") as file:
+                pickle.dump(dataset, file, pickle.HIGHEST_PROTOCOL)
+
+        return dataset
 
     def get_cols_to_scale(self) -> list:
         cols_to_scale = [
@@ -384,11 +418,13 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    d = Pipeline(model_type="predict_when_upgrade")
-    d.concat_df_with_oh_encoding()
+    data_path = Path(__file__).parents[1] / "data" / "raw_data"
+    d = Pipeline(model_type="predict_upgrade", data_path=data_path)
+    d.get_oh_encoding()
     df = (
         d.df
     )  # this is how you access df if you need it for k-fold, plain df without splitting
-    dict_with_split_sets = (
-        d.scale_final_dataset()
+    save_path = data_path.parents[0] / "dataset.pickle"
+    dataset_split_sets = (
+        d.scale_final_dataset(save_path=save_path),
     )  # this is how you access df if you don't do kfold cross-validation

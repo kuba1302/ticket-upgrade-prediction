@@ -9,3 +9,13 @@ services:
     volumes:
       - ./:/app
     command: /bin/sh -c "while sleep 10000; do :; done"
+  
+  ticket-upgrade-prediction-gpu:
+    build: 
+      context: .
+      dockerfile: Dockerfile.gpu
+    env_file:
+      - .env
+    volumes: 
+      - ./:/app
+    command: /bin/sh -c "while sleep 10000; do :; done"

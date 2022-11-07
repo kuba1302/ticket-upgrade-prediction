@@ -1,0 +1,17 @@
+FROM pytorch/pytorch:1.12.1-cuda11.3-cudnn8-runtime
+RUN useradd --create-home wec
+USER wec
+ENV PATH="/home/wec/.local/bin:${PATH}"
+
+WORKDIR /home/wec
+RUN pip install --upgrade pip wheel
+
+COPY --chown=wec requirements.txt /tmp/requirements.txt
+RUN pip install --user -r /tmp/requirements.txt
+RUN pip install --user torch
+
+WORKDIR /app
+
+COPY --chown=wec . .
+
+CMD echo "You need to provide command using compose!"
