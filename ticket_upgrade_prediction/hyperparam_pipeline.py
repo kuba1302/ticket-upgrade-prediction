@@ -30,6 +30,9 @@ class HyperparamPipeline:
     cols_to_scale: columns to scale within kfold cv
     classification: whether out target is classification or regression
     metric: what metric to optimize
+
+    Note: when using search_for_params user has to choose algo, either random or grid search. When using random search,
+    one has to pass n_iters parameter with its value corresponding to how many times the user wants to randomize params
     """
     def __init__(
         self,
