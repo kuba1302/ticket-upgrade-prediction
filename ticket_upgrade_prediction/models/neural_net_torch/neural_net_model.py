@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 import torch.nn as nn
-from data_loader import UpgradeDataset
 
 from ticket_upgrade_prediction.models import BaseModel
 
