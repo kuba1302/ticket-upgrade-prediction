@@ -14,6 +14,8 @@ from sklearn.model_selection import KFold, ParameterGrid, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
 
+from ticket_upgrade_prediction.evaluator import Evaluator, Metrics
+
 warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 from typing import Tuple
@@ -34,6 +36,7 @@ class HyperparamPipeline:
     Note: when using search_for_params user has to choose algo, either random or grid search. When using random search,
     one has to pass n_iters parameter with its value corresponding to how many times the user wants to randomize params
     """
+
     def __init__(
         self,
         X: pd.DataFrame,
@@ -56,7 +59,11 @@ class HyperparamPipeline:
         self.stratify = stratify
 
     def get_best_params(self) -> Tuple[dict, float]:
-        return self.params[np.argmax(self.scores)], np.max(self.scores)
+        metric_list = [
+            metric_obj.get_metric_from_string(self.metric)
+            for metric_obj in self.scores
+        ]
+        return self.params[np.argmax(metric_list)], np.max(metric_list)
 
     def search_for_params(
         self, searching_algo: str = "random", n_splits: int = 5, **kwargs
@@ -103,10 +110,10 @@ class HyperparamPipeline:
 
     def create_splits_and_calc_scores(
         self, n_splits: int, iteration_params: dict
-    ) -> np.ndarray:
+    ) -> Metrics:
         kf = StratifiedKFold(n_splits) if self.stratify else KFold(n_splits)
-        return np.mean(
-            [
+        return Metrics.from_multiple_metrics(
+            *[
                 self.create_preds_for_hypers(
                     train_index, test_index, iteration_params
                 )
@@ -127,7 +134,9 @@ class HyperparamPipeline:
             self.y.iloc[train_index],
             self.y.iloc[test_index],
         )
-        X_train.iloc[:, self.map_cols_to_scale_to_boolean()] = scaler.fit_transform(
+        X_train.iloc[
+            :, self.map_cols_to_scale_to_boolean()
+        ] = scaler.fit_transform(
             X_train.iloc[:, self.map_cols_to_scale_to_boolean()]
         )
         X_test.iloc[:, self.map_cols_to_scale_to_boolean()] = scaler.transform(
@@ -140,19 +149,14 @@ class HyperparamPipeline:
         train_index: np.ndarray,
         test_index: np.ndarray,
         iteration_params: dict,
-    ) -> float:
+    ) -> Metrics:
         model = self.determine_model(iteration_params)
         X_train, X_test, y_train, y_test = self.get_scaled_train_and_test_sets(
             train_index, test_index
         )
         model.fit(X_train, y_train.values.ravel())
-        # predictions = model.predict_proba(X_test)[:, 1] if self.classification else model.predict(X_test)
-        predictions = model.predict(X_test)
-        return self.calculate_metric(predictions, y_test)
-
-    def calculate_metric(self, y_pred: pd.Series, y_true: pd.Series) -> float:
-        # add support for more metrics
-        return 1
+        ev = Evaluator(model=model, X=X_test, y=y_test)
+        return ev.get_all_metrics()
 
     def determine_model(self, params: dict):
         if self.model == "xgb":
@@ -200,7 +204,7 @@ if __name__ == "__main__":
         stratify=True,
         cols_to_scale=list(X.columns),
         classification=True,
-        metric="accuracy_score",
+        metric="accuracy",
     )
     hp.search_for_params(searching_algo="grid", n_splits=5)
     print(hp.get_best_params())
