@@ -20,6 +20,17 @@ from typing import Tuple
 
 
 class HyperparamPipeline:
+    """
+    Hyperparameter pipeline for parameter optimization
+    X: pandas dataframe with independent variables
+    y: pandas series with dependent variable
+    model: any of xgb, lr, knn, cat, lgb
+    param_space: space which one'd like to look over when searching for optimal hypers
+    stratify: whether to stratify dataset
+    cols_to_scale: columns to scale within kfold cv
+    classification: whether out target is classification or regression
+    metric: what metric to optimize
+    """
     def __init__(
         self,
         X: pd.DataFrame,
