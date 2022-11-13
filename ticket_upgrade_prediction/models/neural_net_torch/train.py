@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+import mlflow
 import pandas as pd
 import torch
 from data_loader import UpgradeDataset
@@ -16,7 +17,6 @@ from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-import mlflow
 from ticket_upgrade_prediction import Evaluator, Metrics
 from ticket_upgrade_prediction.config.env_config import EXPERIMENT_NAME
 from ticket_upgrade_prediction.pipeline import Dataset
