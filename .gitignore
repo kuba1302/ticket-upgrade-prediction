@@ -151,3 +151,4 @@ data/WEC_Hackathon_Lot_Case.pdf
 
 .vscode
 .env
+mlruns/*
