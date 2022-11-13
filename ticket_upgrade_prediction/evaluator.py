@@ -2,13 +2,15 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import pandas as pd
 import torch
 from matplotlib.figure import Figure
+from sklearn.base import ClassifierMixin
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import PartialDependenceDisplay
@@ -24,7 +26,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-import mlflow
 from ticket_upgrade_prediction.models import BaseModel
 
 
@@ -48,6 +49,12 @@ class Metrics:
         return cls(**metrics_df.to_dict())
 
     def get_metric_from_string(self, metric_name: str) -> float:
+        """
+        Select one metric from string.
+        Possible metric_name values:
+        accuracy, roc_auc, precision
+        recall, f1, pr_auc, epoch
+        """
         metric_mapping = {
             "accuracy": self.accuracy,
             "roc_auc": self.roc_auc,
