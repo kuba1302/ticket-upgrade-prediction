@@ -16,3 +16,4 @@ Polish Airlines passengers&#39; propensity to upgrade their travel.
 
 This project is currently being rewritten in order to make it usefull in future competitions. Furthermore, an attempt will be made to publish it in a scientific journal.  
 New code is stored in [/ticket_upgrade_prediction](https://github.com/kuba1302/ticket-upgrade-prediction/tree/update-readme/ticket_upgrade_prediction).
+
