@@ -58,10 +58,10 @@ class Network(nn.Module, BaseModel):
         )
 
     def get_fitted_model(self, **kwargs):
-        """Retrieve fitted model from MLflow"""
+        """TODO Retrieve fitted model from MLflow"""
 
     def save_model_to_pickle(self, model_name):
-        """Save model to .pkl"""
+        """TODO Save model to .pkl"""
 
     def save_model_to_mlflow(self, model_name, artifact_path, X_test, y_test):
-        """Save model to mlflow"""
+        """TODO Save model to mlflow"""

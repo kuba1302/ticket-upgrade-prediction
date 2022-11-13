@@ -12,3 +12,5 @@ graphs. Binary classification results confirm the significant positive effect of
 Polish Airlines passengers&#39; propensity to upgrade their travel.
 
 #### Files prepared during 24h of the Hackathon are stored in [archive](https://github.com/kuba1302/ticket-upgrade-prediction/tree/main/archive).
+
+This project is currently being rewritten in order to make it usefull in future competitions. Furthermore, an attempt will be made to publish it in a scientific journal.
