@@ -48,7 +48,7 @@ class Network(nn.Module, BaseModel):
         network = nn.Sequential(self.layers, nn.Sigmoid())
         return network(X_tensor.float())
 
-    def predict(self, X, threshold=0.5):
+    def predict(self, X, threshold: float = 0.5):
         proba = self.predict_proba(X=X)
         return torch.where(proba >= threshold, 1, 0).numpy()
 
