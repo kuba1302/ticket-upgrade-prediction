@@ -1,5 +1,6 @@
 # Ticket upgrade prediction - Warsaw Econometric Challenge Hackathon
 
+### Hackathon task description
 Predicting the willingness of passengers of the Polish Airlines &quot;LOT&quot; towards upgrading their
 trip. An additional objective was to determine the optimal date for sending out an informational
 message through digital channels (sms, email, app push) addressed to passengers with active
@@ -13,4 +14,5 @@ Polish Airlines passengers&#39; propensity to upgrade their travel.
 
 #### Files prepared during 24h of the Hackathon are stored in [archive](https://github.com/kuba1302/ticket-upgrade-prediction/tree/main/archive).
 
-This project is currently being rewritten in order to make it usefull in future competitions. Furthermore, an attempt will be made to publish it in a scientific journal.
+This project is currently being rewritten in order to make it usefull in future competitions. Furthermore, an attempt will be made to publish it in a scientific journal.  
+New code is stored in [/ticket_upgrade_prediction](https://github.com/kuba1302/ticket-upgrade-prediction/tree/update-readme/ticket_upgrade_prediction).
