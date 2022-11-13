@@ -88,7 +88,7 @@ class BaseEvaluator(ABC):
 class Evaluator(BaseEvaluator):
     def __init__(
         self,
-        model: Union[BaseModel, ClassifierMixin],
+        model: BaseModel,
         X: pd.DataFrame,
         y: np.ndarray,
     ) -> None:
@@ -142,10 +142,10 @@ class Evaluator(BaseEvaluator):
             return proba[:, 1]
 
     def get_accuracy(self) -> float:
-        return accuracy_score(y_true=self.y, y_pred=self.preds)
+        return accuracy_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_roc_auc(self) -> float:
-        return roc_auc_score(y_true=self.y, y_score=self.proba)
+        return roc_auc_score(y_true=self.y, y_score=self.proba)  # type: ignore
 
     def _get_pr_curve_properties(self) -> tuple:
         precision, recall, thresholds = precision_recall_curve(
@@ -155,20 +155,20 @@ class Evaluator(BaseEvaluator):
         return precision, recall, thresholds
 
     def get_precision(self) -> float:
-        return precision_score(y_true=self.y, y_pred=self.preds)
+        return precision_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_recall(self) -> float:
-        return recall_score(y_true=self.y, y_pred=self.preds)
+        return recall_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_f1_score(self) -> float:
-        return f1_score(y_true=self.y, y_pred=self.preds)
+        return f1_score(y_true=self.y, y_pred=self.preds)  # type: ignore
 
     def get_pr_auc(self) -> float:
         precision, recall, _ = self._get_pr_curve_properties()
         return auc(recall, precision)
 
     def get_all_metrics(
-        self, to_mlflow: bool = False, epoch: int = None
+        self, to_mlflow: bool = False, epoch: int | None = None
     ) -> Metrics:
         metrics = Metrics(
             accuracy=self.get_accuracy(),
@@ -185,7 +185,7 @@ class Evaluator(BaseEvaluator):
 
         return metrics
 
-    def plot_roc_curve(self, save_path: Optional[Path] = None) -> Figure:
+    def plot_roc_curve(self, save_path: Path | None = None) -> Figure:
         fpr, tpr, thresholds = roc_curve(y_true=self.y, y_score=self.proba)
         auc_score = auc(fpr, tpr)
 
@@ -200,7 +200,7 @@ class Evaluator(BaseEvaluator):
         ax.scatter(
             fpr[ix],
             tpr[ix],
-            marker="o",
+            marker="o",  # type: ignore
             color="black",
             label=f"Best Threshold={thresholds[ix]:.2f}, G-Mean={gmeans[ix]:.2f}",
         )
@@ -240,7 +240,7 @@ class Evaluator(BaseEvaluator):
         ax.scatter(
             recall[ix],
             precision[ix],
-            marker="o",
+            marker="o",  # type: ignore
             color="black",
             label=f"Best Threshold={thresholds[ix]:.2f}, F-Score={fscore[ix]:.2f}",
         )
@@ -288,9 +288,9 @@ class Evaluator(BaseEvaluator):
 
 
 if __name__ == "__main__":
-    # Usage tutorial
+    # Just for testing purposes, to be removed later
     save_path = Path(__file__).parents[1] / "plots"
-    X, y = make_classification(n_samples=10000, weights=[0.5], n_classes=2)
+    X, y = make_classification(n_samples=10000, weights=[0.5])
     X = pd.DataFrame(data=X, columns=[f"col_{x}" for x in range(X.shape[1])])
     y = pd.DataFrame(data=y, columns=["y"])
 
@@ -298,10 +298,21 @@ if __name__ == "__main__":
         X, y, test_size=0.33, random_state=42
     )
     model = RandomForestClassifier()
-    model.fit(X=X_train, y=y_train)
+    model.fit(X_train, y_train)
     evaluator = Evaluator(model=model, X=X_test, y=y_test)
-    metric = evaluator.get_all_metrics()
-    print(metric.get_metric_from_string("roc_auc"))
     evaluator.plot_precision_recall_curve(save_path=save_path)
     evaluator.plot_roc_curve(save_path=save_path)
     evaluator.plot_partial_dependency_plot(save_path=save_path)
+
+    # print(evaluator.get_all_metrics())
+    # mlflow.set_tracking_uri("http://localhost:5000")
+    # with mlflow.start_run():
+    #     model = RandomForestClassifier()
+    #     model.fit(X_train, y_train)
+    #     evaluator = Evaluator(model=model, X=X_test, y=y_test)
+    #     evaluator.get_all_metrics(to_mlflow=True)
+    #     mlflow.sklearn.log_model(
+    #         sk_model=model,
+    #         artifact_path="sklearn-model",
+    #         registered_model_name="rf_random_data",
+    #     )
